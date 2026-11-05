@@ -15,6 +15,7 @@ p.add_argument('--lr', type=float, default=1e-3)
 p.add_argument('--hidden', type=int, default=256)
 p.add_argument('--layers', type=int, default=4)
 p.add_argument('--loss_mask', default='insp')   # 'insp' = only u_out==0 steps, 'all' = every step
+p.add_argument('--dropout', type=float, default=0.0)
 p.add_argument('--seed', type=int, default=42)
 args = p.parse_args()
 
@@ -65,7 +66,7 @@ class Net(nn.Module):
     def __init__(self, nf):
         super().__init__()
         self.inp = nn.Sequential(nn.Linear(nf, args.hidden), nn.SiLU())
-        self.lstm = nn.LSTM(args.hidden, args.hidden, num_layers=args.layers, batch_first=True, bidirectional=True)
+        self.lstm = nn.LSTM(args.hidden, args.hidden, num_layers=args.layers, batch_first=True, bidirectional=True, dropout=args.dropout)
         self.head = nn.Sequential(nn.Linear(2 * args.hidden, args.hidden), nn.SiLU(), nn.Linear(args.hidden, 1))
     def forward(self, x):
         h, _ = self.lstm(self.inp(x))
