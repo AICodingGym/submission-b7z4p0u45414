@@ -270,3 +270,18 @@ Principle: every arm targets breath-level memorization, has one change and 2 see
 | N4 | input-noise augmentation on raw u_in during training (features recomputed) | makes exact u_in sequences unmemorisable, forcing a rule | 2 x ~45 / 2 x ~85 | yes (v3; CPU smoke test before launch) |
 | N5 | if T1 adopted: T1 + N-winner combination; else a 3rd seed of T1 | - | 2 x 40 | no |
 At 150 epochs N1-N5 is about 6.5 h, leaving room for N4 at 2 more seeds or folds of the best config. At 300 epochs, drop N5 and N4's second seed.
+
+
+### L1 result (approved by the user, run 20:27 UTC on CPU; src/L1_corrector.py -> runs/analysis/L1_corrector.csv)
+Setup as pre-registered: 121 features (u_in x 80, exp06's predicted pressure on steps 0-31, R, C, inspiration length, dt mean/max, end time, predicted insp mean/max, u_out count). Corrector for fold k trained only on the other 4 folds' OOF residuals. HistGradientBoosting with max_iter 500, lr 0.05, 63 leaves, early stopping; all fixed before any result.
+| variant | fold 0 | fold 1 | fold 2 | fold 3 | fold 4 | pooled OOF (base 0.21584) | CV R^2 of offset |
+|---|---|---|---|---|---|---|---|
+| PRIMARY: squared-error loss (pre-registered) | -0.00139 | -0.00227 | +0.00009 | +0.00033 | -0.00136 | 0.21676 (worse by 0.00092) | 0.061 |
+| secondary, NOT pre-registered: absolute-error loss | +0.00065 | +0.00076 | +0.00054 | +0.00053 | +0.00022 | 0.21530 (better by 0.00054) | 0.019 |
+(fold cells = OOF gain; positive = better)
+- Verdict: PROVEN WRONG. R^2 0.061 clears the 0.02 bar, but the OOF criterion fails: 0/5 folds improved by >= 0.002, and the primary corrector made 3/5 folds worse.
+- The absolute-error variant improves every fold, but by only 0.0002-0.0008, a quarter of the bar. Its R^2 is 0.019. It was added after the pre-registration, so it is reported, not adopted.
+- Interpretation (GUESS): the squared-error corrector explains some variance in the large offsets but moves typical breaths the wrong way under MAE. Neither variant recovers a useful part of the per-breath level from these inputs.
+- Consistent with the train-fold diagnostic: the level is placed by memorisation on seen breaths and is mostly not inferable for new ones, at least by a tree model on these features.
+- Not ruled out: a sequence learner could still extract it; T1 (all-step supervision, running today) is one test of that.
+- Consequence for the evening draft: deprioritize further level-correction ideas. Keep the arms that attack memorization directly (N1 batch 128, N2 wd 1e-2, N4 u_in noise).

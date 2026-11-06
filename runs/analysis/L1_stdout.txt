@@ -1,0 +1,14 @@
+features (67905, 121) prep 8 s
+{'loss': 'squared_error', 'fold': 0, 'base': 0.21490616, 'corrected': 0.21629231410244193, 'gain': -0.0013861580393620954, 'r2': 0.06065528167499201, 'iters': 72}
+{'loss': 'squared_error', 'fold': 1, 'base': 0.21513951, 'corrected': 0.21740466952053403, 'gain': -0.002265161273158539, 'r2': 0.05086513286425953, 'iters': 88}
+{'loss': 'squared_error', 'fold': 2, 'base': 0.21981494, 'corrected': 0.2197267816160239, 'gain': 8.8159671016802e-05, 'r2': 0.06441891378655784, 'iters': 62}
+{'loss': 'squared_error', 'fold': 3, 'base': 0.21441752, 'corrected': 0.2140859226195616, 'gain': 0.00033159456564957335, 'r2': 0.06282812956159312, 'iters': 37}
+{'loss': 'squared_error', 'fold': 4, 'base': 0.21492356, 'corrected': 0.21628198961349634, 'gain': -0.0013584289941420968, 'r2': 0.06753360903498318, 'iters': 109}
+{'loss': 'absolute_error', 'fold': 0, 'base': 0.21490616, 'corrected': 0.2142582498943838, 'gain': 0.000647906168696033, 'r2': 0.019439461216564258, 'iters': 97}
+{'loss': 'absolute_error', 'fold': 1, 'base': 0.21513951, 'corrected': 0.2143839235587702, 'gain': 0.0007555846886052875, 'r2': 0.03225024049333258, 'iters': 46}
+{'loss': 'absolute_error', 'fold': 2, 'base': 0.21981494, 'corrected': 0.21927510260931315, 'gain': 0.0005398386777275554, 'r2': 0.018214217065369187, 'iters': 51}
+{'loss': 'absolute_error', 'fold': 3, 'base': 0.21441752, 'corrected': 0.21388298214580712, 'gain': 0.000534535039404066, 'r2': 0.01623060638778806, 'iters': 49}
+{'loss': 'absolute_error', 'fold': 4, 'base': 0.21492356, 'corrected': 0.21470257601565665, 'gain': 0.0002209846036975993, 'r2': 0.008582926625338438, 'iters': 52}
+squared_error: pooled OOF 0.21584 -> 0.21676 (gain -0.00092); pooled CV R2 0.0613; folds improved >= 0.002: 0/5; mean fold gain -0.00092
+absolute_error: pooled OOF 0.21584 -> 0.21530 (gain 0.00054); pooled CV R2 0.0190; folds improved >= 0.002: 0/5; mean fold gain 0.00054
+L1 DONE 34 s
