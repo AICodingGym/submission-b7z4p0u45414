@@ -185,3 +185,39 @@ Leaderboard (both submissions approved by the user in chat):
 - Expected (GUESS): 0.215-0.225 (the two seeds so far: 0.21491, 0.22370).
 - Would show the noise is even bigger than thought if it falls outside 0.205-0.235.
 - GPU: ~77 min. Started after the throughput test finishes.
+
+
+### Throughput test (3a): result (runs/bench_throughput.csv; train time only, fold-0 train breaths, 2nd epoch)
+| batch | LR | steps/epoch | s/epoch (CPU-indexed, as v2) | s/epoch (data on GPU) | ms/step | GPU util median | peak mem |
+|---|---|---|---|---|---|---|---|
+| 128 | 5e-4 | 425 | 14.70 | 14.43 | 34.6 | 92% | 0.56 GB |
+| 256 | 1e-3 | 213 | 14.08 | 13.92 | 66.1 | 96% | 1.01 GB |
+| 512 | 2e-3 | 107 | 13.81 | 13.60 | 129.0 | 98% | 1.90 GB |
+- Verdict: pre-registration PROVEN WRONG. bs 128 is 14.70 s, which is <= 1.1 x bs 512 (15.2 s). My guesses (38 / 22 s) were far off. For hidden 128 x 4 the GPU is already about 92% busy at bs 128, and time per epoch is nearly independent of batch size (+6% from 512 to 128).
+- Consequence (data): bs 128 gives 4x more optimizer steps per epoch for about 6% more time. Keeping data on the GPU saves only about 2%; not worth a code change.
+- Open question (not tested): whether bs 128 reaches the same OOF in fewer epochs. That is an accuracy question.
+
+## CPU error analysis, fold 0 (src/error_analysis.py -> runs/analysis/; S = exp06 single, E = exp04+06+07+08 mean)
+- By (R,C) (step-weighted MAE): R=50 is 40% of breaths but 51% of the single model's error (R50C50 0.322, R50C20 0.297, R50C10 0.229). Highest val/train ratios: R50C50 2.72, R5C10 2.62, R50C10 2.48; lowest: R5C50 1.48. Averaging gain is largest for R=50 (0.023-0.033).
+- By position in inspiration: error rises from 0.158 (k = 0) to 0.236 (k = 15-18), dips to 0.219 (k = 27), then 0.265 at k = 30 (only 6,247 breaths reach k = 30).
+- Concentration: breath MAE median 0.127, p90 0.405, p99 1.49, max 12.0 (single). The worst 1/5/10% of breaths hold 12/29/41% of the error (single), 12/31/43% (ensemble).
+- Averaging gain by difficulty decile: none on the easiest 10% (-0.0015), +0.10 absolute on the hardest 10%. Relative gain about 10% from decile 5 up.
+- Worst 20 breaths (runs/analysis/worst20.png, worst20.csv): 18/20 are R = 50 with LOW u_in (mean during inspiration 4-12) and plateau pressures 20-42. The other 2 are R5C10 outliers; one has u_in hitting 100 (MAE 7.3), one has MAE 11.5.
+- From the plots: in those 18, the model gets the SHAPE of the inspiratory pressure right (the oscillations line up) but the LEVEL is offset by a near-constant 3-5 cmH2O, in both directions (9 too high, 11 too low).
+- Level vs shape (computed, all fold-0 breaths): removing each breath's mean signed error on scored steps (an oracle) would cut S from 0.21491 to 0.13895 and E from 0.19409 to 0.11976. So 35% (S) / 38% (E) of all error is a per-breath constant offset. For the worst 20: 4.31 -> 1.39. Similar share for every R (0.38-0.39). Mean |offset| is largest at R = 50 (0.18 vs 0.11-0.13).
+- The offset is systematic, not variance: the per-breath offsets of S and E correlate 0.91. That is why averaging does not fix them.
+- Is the offset predictable from simple breath summaries? (R, C, inspiration length, u_in insp mean/max/std/first/last, u_in expiration mean/last, dt mean/max, end time; HistGradientBoosting, 5-fold CV within fold-0 val.) R^2 = 0.009. Subtracting the predicted offset makes OOF worse (0.19564 vs 0.19409). Answer: no. Every |Spearman| with |offset| is <= 0.12.
+- Rarity: nearest training-fold breath (same R,C) by Euclidean distance on u_in over the first 32 steps. Spearman(NN distance, breath MAE) = 0.047. The worst 20 sit at median percentile 0.53 and the worst 1% at 0.24; only 2/20 are in the rarest decile (the two R5C10 outliers). The closest-neighbour decile has the HIGHEST MAE (0.28).
+  - Caveat: this distance is scale-confounded (low-u_in breaths have small distances, and low-u_in R=50 breaths are the hard ones), so it is a weak test.
+  - Conclusion: "the worst breaths are rare u_in patterns" is NOT supported, except for the 2 outliers.
+- Interpretation (GUESS, labelled): the hard breaths need a breath-level quantity (the plateau level) that our models do not extract from the inputs. Simple summaries do not contain it either. If it is recoverable at all, it is in the detailed u_in dynamics. [COMPETITION-SPECIFIC?] The pressure oscillations mirror u_in, which suggests u_in comes from a feedback controller reacting to pressure. If so, u_in's fine detail carries pressure information. This is my reading of our own plots, not from any outside source.
+
+## Proposed queue for tonight (NOT approved yet; nothing started)
+Controls already exist: exp06 (seed 42) 0.21491, exp08 (seed 43) 0.22370, exp09 (seed 44) running. All are the exp06 config, fold 0.
+Decision rule for every arm (pre-registered): pooled seed SD s from the 3 control seeds; adopt a challenger only if mean(challenger, 2 seeds) < mean(controls) - 2 * s * sqrt(1/2 + 1/3). GUESS: s ~ 0.005-0.006, so the detectable effect is ~0.009-0.011.
+| arm | runs | single change vs exp06 | hypothesis | expected fold-0 OOF, mean of 2 (GUESS) | proven wrong if | GPU |
+|---|---|---|---|---|---|---|
+| T1 | exp10a/b (seeds 42, 43) | --loss_mask all (supervise all 80 steps) | expiratory pressure carries information about the same breath-level latent that sets the inspiratory level, so 2.5x more targets per breath reduce the level offset | 0.205-0.215 | rule not met, OR the oracle level share (35%) does not drop | 2 x 77 min |
+| T2 | exp11a/b (seeds 42, 43) | --epochs 150 | half the schedule gets within noise of 300 | controls + 0.000 to +0.008 | mean(150) > mean(controls) + 2 * s * sqrt(1/2 + 1/3) | 2 x 39 min |
+| T3 | exp12a/b (seeds 42, 43) | --hidden 256 | the offset is shared by every model we trained (corr 0.91), i.e. a bias of this model size; more capacity can decode finer u_in detail | 0.200-0.212 | rule not met | 2 x ~160 min (254 vs 121 ms/step measured earlier for 256x4 vs 128x4) |
+Total about 9.2 h. If T2 passes, every later experiment costs half.
