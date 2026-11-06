@@ -285,3 +285,49 @@ Setup as pre-registered: 121 features (u_in x 80, exp06's predicted pressure on 
 - Consistent with the train-fold diagnostic: the level is placed by memorisation on seen breaths and is mostly not inferable for new ones, at least by a tree model on these features.
 - Not ruled out: a sequence learner could still extract it; T1 (all-step supervision, running today) is one test of that.
 - Consequence for the evening draft: deprioritize further level-correction ideas. Keep the arms that attack memorization directly (N1 batch 128, N2 wd 1e-2, N4 u_in noise).
+
+
+### exp09 result (seed 44, exp06 config, 300 epochs)
+- Best val 0.22432; the log was last written 20:58:54 UTC and the queue logged "exp09 finished" at 20:59.
+- Inside its pre-registered 0.215-0.225, so the noise is not even bigger than thought.
+- Timing check: I read epoch 184 at 20:28 UTC; 116 x 15.3 s predicts 20:57:40. Actual 20:58:54 (mean 15.46 s/epoch over the last 30). T2 (exp10a) started 20:59 UTC.
+- Controls now (300 epochs, seeds 42/43/44): 0.21491 / 0.22370 / 0.22432, mean 0.22098, SD 0.00526 (2 df). T2 pass threshold = 0.23059.
+- Side note: exp07 (wd 1e-2, 1 seed) vs the 3-control mean is -0.01019, but 2 SE for 1-vs-3 is 0.01215, so still not significant.
+- MISTAKE (AI, minor): my CPU jobs (L1, noise sensitivity) slowed the GPU run. exp10a ran 16.2 s/epoch (vs 15.3) while they ran. Keep CPU work short while a timed queue runs.
+
+### u_in noise (N4): label validity and level. Answer owed to the user.
+- Before measuring, I had given NO noise level and no argument that the labels stay valid. Strictly they do not: pressure is the response to the real u_in, so any perturbation changes the true pressure.
+- The only defensible version is noise small enough that the implied pressure change is below label resolution. Rule set before measuring: mean |dP| on scored steps <= 0.035 (half the 0.0703 grid step).
+- Measured (runs/analysis/uin_noise_sensitivity.*): exp06 fold-0 model as a stand-in for the unknown physics; 4,000 fold-0 val breaths; iid Gaussian noise on u_in, clipped to [0,100], features recomputed. Scored-step u_in: median 7.6, mean 14.8, 14.7% exactly 0.
+| sigma (u_in units) | mean abs dP | p95 abs dP | mean abs dP, R=50 | model MAE vs truth (base 0.2137) |
+|---|---|---|---|---|
+| 0.02 | 0.055 | 0.211 | 0.080 | 0.2306 |
+| 0.05 | 0.113 | 0.486 | 0.174 | 0.2604 |
+| 0.1 | 0.193 | 0.838 | 0.286 | 0.3131 |
+| 0.25 | 0.343 | 1.437 | 0.499 | 0.4361 |
+| 0.5 | 0.529 | 2.067 | 0.763 | 0.5944 |
+| 1.0 | 0.776 | 2.956 | 1.116 | 0.8198 |
+| 2.0 | 1.112 | 3.980 | 1.615 | 1.1425 |
+- Verdict: no tested level meets the rule; even sigma 0.02 gives 0.055 > 0.035. N4 is DROPPED.
+- Caveat: this is the MODEL's sensitivity, not physics. The true dP/du_in cannot be measured from observational data. The model may be over-sensitive.
+- Finding in its own right (data): a 0.02-unit perturbation (~0.3% of median u_in) shifts predictions by 0.055 and raises MAE by 0.017. The network keys on tiny details of u_in. That fits the memorization picture.
+- [COMPETITION-SPECIFIC?] It also fits the earlier guess that fine u_in detail carries pressure information.
+
+## Evening queue: DRAFT v2 (src/evening.sh, NOT launched; finalize after T2's verdict)
+Answers to the user's questions:
+(2) Every challenger runs seeds 42 AND 43. A third seed (44) appears only for controls (N3) and, if T1 is adopted, for T1 (N5).
+(3) N1 batch 128 keeps LR at 2e-3 (unchanged), so batch size is the only change. OneCycle total steps follow automatically (4x the steps). Scaling LR would be a second change.
+(5) Current wd = 1e-5 (v2 L27 default; v1 L92 hard-coded). The optimizer is AdamW (v2 L106; v1 L92), so wd is decoupled.
+GPU time per run: 300 epochs = 76-77 min (measured: overnight START/END stamps). 150 epochs = ~39 min (estimate; exp10a will measure it). bs 128 = +6.4% train time (measured in the throughput test): ~81 / ~41 min.
+| arm | runs | single change vs reference | hypothesis | expected, mean of 2 (GUESS) | GPU at 150 ep | GPU at 300 ep |
+|---|---|---|---|---|---|---|
+| N1 | exp12a/b (42, 43) | bs 512 -> 128, LR 2e-3 unchanged | 4x more, noisier updates regularize against breath memorization | ref - 0.005 (range -0.015 to +0.010); instability at LR 2e-3 would also count against it | 2 x 41 = 82 min | 2 x 81 = 162 min |
+| N2 | exp13a/b (42, 43) | wd 1e-5 -> 1e-2 | decoupled wd shrinks the large weights memorization needs (exp07 hint: -0.010 vs controls, n.s.) | ref - 0.006 | 2 x 39 = 78 min | 1 x 77 (exp07 is seed 42) |
+| N3 | exp14 (44) | none (control) | third reference seed at 150 epochs | = ref | 39 min | 0 (exp09 exists) |
+| N5 | exp11c (44) | T1, only if adopted | firms up T1 | - | 39 min | 77 min |
+| total | | | | | 3.3-4.0 h | 4.0-5.3 h |
+- References: at 150 epochs exp10a/exp10b/exp14 (seeds 42/43/44); at 300 epochs exp06/08/09.
+- Rule (pre-registered): ADOPT if mean(challenger) < mean(reference) - 2*s*sqrt(1/2+1/3), with s = SD of the 3 reference seeds.
+- Spare time on a 12 h pod (~11 h usable): about 7 h at 150 epochs, 5.7 h at 300.
+- OPTION for the user (not included): a seed-44 run for N1 and N2 (+80 min at 150, +158 min at 300). It raises power (detectable effect drops from ~0.011 to ~0.009 if s ~ 0.005).
+- Launch needs this server's GPU released first (1-GPU quota): the day queue ends ~23:40 UTC (150) or ~01:00 UTC (300).

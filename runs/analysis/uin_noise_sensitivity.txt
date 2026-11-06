@@ -1,0 +1,9 @@
+4000 val breaths: model MAE 0.2137; u_in on scored steps: median 7.60, mean 14.77, p10 0.00, p90 40.60; pressure grid step 0.0703
+{'sigma': 0.02, 'mean_abs_dP': 0.054566927, 'p95_abs_dP': 0.2106929779052733, 'mean_abs_dP_R50': 0.080180295, 'mae_vs_truth': 0.23064834199838385}
+{'sigma': 0.05, 'mean_abs_dP': 0.11308859, 'p95_abs_dP': 0.4855089187622068, 'mean_abs_dP_R50': 0.17396854, 'mae_vs_truth': 0.2603697789884993}
+{'sigma': 0.1, 'mean_abs_dP': 0.19287822, 'p95_abs_dP': 0.8377899646759033, 'mean_abs_dP_R50': 0.28607458, 'mae_vs_truth': 0.31312460215732685}
+{'sigma': 0.25, 'mean_abs_dP': 0.34337273, 'p95_abs_dP': 1.4369958877563456, 'mean_abs_dP_R50': 0.4990391, 'mae_vs_truth': 0.43613564075897765}
+{'sigma': 0.5, 'mean_abs_dP': 0.5294509, 'p95_abs_dP': 2.066953086853025, 'mean_abs_dP_R50': 0.7629102, 'mae_vs_truth': 0.5943959945877286}
+{'sigma': 1.0, 'mean_abs_dP': 0.7760132, 'p95_abs_dP': 2.955619716644283, 'mean_abs_dP_R50': 1.1156338, 'mae_vs_truth': 0.8198379916005678}
+{'sigma': 2.0, 'mean_abs_dP': 1.1117927, 'p95_abs_dP': 3.980009651184081, 'mean_abs_dP_R50': 1.6150867, 'mae_vs_truth': 1.1424581845615185}
+DONE
