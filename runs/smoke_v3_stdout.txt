@@ -1,0 +1,15 @@
+features 31 ['R', 'C', 'time_step', 'u_in', 'u_out', 'dt', 'vol', 'u_in_cum', 'lag1', 'lead1', 'lag2', 'lead2', 'lag3', 'lead3', 'lag4', 'lead4', 'd1', 'd2', 'u_out_lag1', 'u_out_lead1', 'R_', 'C_', 'R5', 'R20', 'R50', 'C10', 'C20', 'C50', 'RC', 'vol_over_C', 'uin_x_R']
+fold 0 ep 0 train 17.0584 val_insp_mae 17.6326 best 17.6326 15.6s
+fold 0 ep 1 train 16.8586 val_insp_mae 17.5673 best 17.5673 15.3s
+FOLD 0 DONE best val_insp_mae 17.56733
+V2DONE
+features 31 ['R', 'C', 'time_step', 'u_in', 'u_out', 'dt', 'vol', 'u_in_cum', 'lag1', 'lead1', 'lag2', 'lead2', 'lag3', 'lead3', 'lag4', 'lead4', 'd1', 'd2', 'u_out_lag1', 'u_out_lead1', 'R_', 'C_', 'R5', 'R20', 'R50', 'C10', 'C20', 'C50', 'RC', 'vol_over_C', 'uin_x_R']
+fold 0 ep 0 train 17.0584 val_insp_mae 17.6326 best 17.6326 16.6s
+fold 0 ep 1 train 16.8586 val_insp_mae 17.5673 best 17.5673 16.9s
+FOLD 0 DONE best val_insp_mae 17.56733
+V3EQDONE
+features 31 ['R', 'C', 'time_step', 'u_in', 'u_out', 'dt', 'vol', 'u_in_cum', 'lag1', 'lead1', 'lag2', 'lead2', 'lag3', 'lead3', 'lag4', 'lead4', 'd1', 'd2', 'u_out_lag1', 'u_out_lead1', 'R_', 'C_', 'R5', 'R20', 'R50', 'C10', 'C20', 'C50', 'RC', 'vol_over_C', 'uin_x_R']
+fold 0 ep 0 train 17.0584 val_insp_mae 17.6326 best 17.6326 16.7s
+fold 0 ep 1 train 16.8584 val_insp_mae 17.5672 best 17.5672 16.9s
+FOLD 0 DONE best val_insp_mae 17.56717
+ALLDONE

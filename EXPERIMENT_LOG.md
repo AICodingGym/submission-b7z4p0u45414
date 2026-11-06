@@ -331,3 +331,53 @@ GPU time per run: 300 epochs = 76-77 min (measured: overnight START/END stamps).
 - Spare time on a 12 h pod (~11 h usable): about 7 h at 150 epochs, 5.7 h at 300.
 - OPTION for the user (not included): a seed-44 run for N1 and N2 (+80 min at 150, +158 min at 300). It raises power (detectable effect drops from ~0.011 to ~0.009 if s ~ 0.005).
 - Launch needs this server's GPU released first (1-GPU quota): the day queue ends ~23:40 UTC (150) or ~01:00 UTC (300).
+
+
+## T2 verdict (decided by src/decide.py at 22:18 UTC)
+| run | epochs | seed | best fold-0 OOF (epoch) |
+|---|---|---|---|
+| exp10a | 150 | 42 | 0.25689 (147) |
+| exp10b | 150 | 43 | 0.25429 (147) |
+| controls exp06 / exp08 / exp09 | 300 | 42 / 43 / 44 | 0.21491 / 0.22370 / 0.22432 (mean 0.22098, SD 0.00527) |
+- T2 mean 0.25559; diff +0.03462; pass threshold 0.23059. FAILED decisively (expected +0.000 to +0.008: my guess was far off).
+- Both 150-epoch runs still had their best at epoch 147 of 150, so they were still improving.
+- Consequence: T1 runs at 300 epochs (exp11a started 22:18 UTC). 300 epochs stays the budget unit; no doubling of the experiment budget.
+- Measured: exp10a/b ran 39-40 min each (START/END stamps).
+
+## N4 reinstated (user decision) + MISTAKE
+- MISTAKE (AI, caught by the user): I judged u_in noise with exp06's own sensitivity as a stand-in for the physics. That proxy assumes its own conclusion: over-sensitivity to tiny u_in changes is the memorization symptom N4 is meant to treat, so a memorizing model will always fail that bar. The fair judge is validation MAE on clean data: if the noise biases the labels, validation gets worse and the arm loses. The sensitivity table stays in the log as a diagnostic, not as a verdict.
+- Chosen noise: MULTIPLICATIVE, u_in' = u_in * (1 + 0.01 * z), z ~ N(0,1), clipped to [0,100]; training batches only; every u_in-derived feature recomputed (vol, u_in_cum, lags/leads, d1, d2, vol_over_C, uin_x_R). Validation and test inputs stay clean.
+- Why sigma = 1% (data, computed 23:07 UTC):
+  - The relative step-to-step change of u_in on scored steps (u_in > 0.5) has median 8.1%, p25 3.1%, p10 1.1%. 1% is ~1/8 of the typical change, so the shape of the control signal survives.
+  - Multiplicative noise leaves the 14.7% of scored steps with u_in exactly 0 at 0, where additive noise plus clipping would bias them upward. 0.9% of scored steps sit at 100 and get clipped.
+- Code: src/train_lstm_v3.py (md5 4193f506) = v2 + --uin_noise; default 0 keeps the v2 code path.
+- CPU smoke tests (CUDA hidden):
+  - (1) Feature parity, 500 breaths: no-noise recompute vs feats() max diff 1.4e-6 SD; noisy recompute vs feats() on an identically noised dataframe max diff 6.9e-7 SD; zeros stay zero; mean relative change 0.80%.
+  - (2) Equivalence: v2 vs v3 with --uin_noise 0 (256 debug breaths, 2 epochs, seed 42): train and val logs bit-identical.
+  - (3) v3 with --uin_noise 0.01: runs, finite, and differs at full precision from the no-noise run (epoch-1 train 16.858408 vs 16.858551), so the noise path is active. It writes oof/test_best/test files.
+- N4 pre-registration:
+  - Hypothesis: 1% training-time u_in noise makes exact sequences unmemorisable and forces a transferable rule.
+  - Expected (GUESS): 2-seed mean = controls - 0.006 (range -0.015 to +0.010).
+  - Proven wrong if: it fails the evening rule, which includes the case where the noise biases labels and validation gets worse.
+  - GPU: ~81 min per run (GUESS: v2's 77 + ~5% for the per-batch recompute).
+
+## L1 (restated for the record; full table above)
+PROVEN WRONG. Primary corrector: pooled OOF 0.21584 -> 0.21676 (worse); fold gains -0.00139/-0.00227/+0.00009/+0.00033/-0.00136; CV R^2 0.061; 0/5 folds improved by >= 0.002. Secondary (not pre-registered): +0.0002 to +0.0008 per fold, R^2 0.019, not adopted. The offset was NOT found predictable, so nothing is cut for it.
+
+## Evening queue: FINAL (src/evening.sh; verdicts by src/decide_evening.py)
+300 epochs (T2 failed). Controls exp06/08/09 (seeds 42/43/44). Rule: ADOPT if mean(arm) < mean(ctrl) - 2*s*sqrt(1/n + 1/3), s = 0.00527.
+| order | run | arm | change vs controls | seed | GPU (300 ep) |
+|---|---|---|---|---|---|
+| 1 | exp12a | N1 | bs 512 -> 128, LR 2e-3 unchanged | 42 | ~81 min (bs128 +6.4% measured) |
+| 2 | exp12b | N1 | same | 43 | ~81 |
+| 3 | exp13b | N2 | wd 1e-5 -> 1e-2 (AdamW) | 43 | 77 |
+| 4 | exp15a | N4 | 1% multiplicative u_in noise (v3) | 42 | ~81 (GUESS) |
+| 5 | exp15b | N4 | same | 43 | ~81 (GUESS) |
+| 6 | exp12c | N1 | seed 44 (user: more power) | 44 | ~81 |
+| 7 | exp13c | N2 | seed 44 | 44 | 77 |
+| 8 | exp11c | N5 | T1 third seed, ONLY if T1 adopted | 44 | 77 |
+- N2's seed 42 is exp07 (same script md5, same config).
+- Detectable effect (2 SE): N1 and N2 with 3 seeds 0.0086; N4 with 2 seeds 0.0096.
+- Total: 559 min (9.3 h) without N5, 636 min (10.6 h) with it, on a 12 h pod. Margin 1.4-2.7 h if the pod's GPU runs at the measured 15.0-15.4 s/epoch.
+- The script refuses to start unless runs/DAYQUEUE_DONE exists. The day queue ends ~00:53 UTC (4:53 PM PT): exp11a ~23:35, exp11b ~00:53.
+- No N3 needed at 300 epochs: exp09 is the third control.
