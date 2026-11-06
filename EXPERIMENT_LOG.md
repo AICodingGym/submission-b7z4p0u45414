@@ -293,7 +293,7 @@ Setup as pre-registered: 121 features (u_in x 80, exp06's predicted pressure on 
 - Timing check: I read epoch 184 at 20:28 UTC; 116 x 15.3 s predicts 20:57:40. Actual 20:58:54 (mean 15.46 s/epoch over the last 30). T2 (exp10a) started 20:59 UTC.
 - Controls now (300 epochs, seeds 42/43/44): 0.21491 / 0.22370 / 0.22432, mean 0.22098, SD 0.00526 (2 df). T2 pass threshold = 0.23059.
 - Side note: exp07 (wd 1e-2, 1 seed) vs the 3-control mean is -0.01019, but 2 SE for 1-vs-3 is 0.01215, so still not significant.
-- MISTAKE (AI, minor): my CPU jobs (L1, noise sensitivity) slowed the GPU run. exp10a ran 16.2 s/epoch (vs 15.3) while they ran. Keep CPU work short while a timed queue runs.
+- CORRECTED (AI): I first logged that my CPU jobs had slowed exp10a to 16.2 s/epoch. Wrong. exp10a's median over its first 20 epochs is 15.43 s (exp09 15.29, exp06 15.0 over their first 25). The 16.2-16.3 s epochs are the ones where val improved (v2 then also predicts the test set). I mis-attributed it from two log lines without checking the median. Lesson (same as before): compute from the logs, not from a glance.
 
 ### u_in noise (N4): label validity and level. Answer owed to the user.
 - Before measuring, I had given NO noise level and no argument that the labels stay valid. Strictly they do not: pressure is the response to the real u_in, so any perturbation changes the true pressure.
