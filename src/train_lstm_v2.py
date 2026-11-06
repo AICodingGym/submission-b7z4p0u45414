@@ -1,11 +1,14 @@
 """BiLSTM sequence model for ventilator pressure prediction (PA3, DSC 102). VERSION 2.
 v2 change vs v1: feature scalers (mu/sd) are fit on the TRAINING FOLDS ONLY, per fold
 (v1 fit them on all train rows incl. the validation fold). Folds come from common.py (same logic as v1).
+v2 bookkeeping (no effect on training): --wd flag (default 1e-5 = v1 value); per-fold args file with script md5;
+test predictions saved to fold{k}_test_best.npy every time validation improves (survives a container stop);
+fold{k}_test.npy (= 'fold completed' marker used by ensemble.py) is still written only after the last epoch.
 Usage: python src/train_lstm_v2.py --name exp01 --folds 0 --epochs 200
 Writes: runs/<name>/fold<k>_{best.pt,oof.npy,test.npy,log.csv}
 """
 import argparse, os, time, json
-import sys
+import sys, hashlib
 import numpy as np, pandas as pd, torch, torch.nn as nn
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import load_train, make_folds
@@ -21,14 +24,16 @@ p.add_argument('--hidden', type=int, default=256)
 p.add_argument('--layers', type=int, default=4)
 p.add_argument('--loss_mask', default='insp')   # 'insp' = only u_out==0 steps, 'all' = every step
 p.add_argument('--dropout', type=float, default=0.0)
+p.add_argument('--wd', type=float, default=1e-5)      # AdamW weight decay (v1 hard-coded 1e-5)
+p.add_argument('--debug_breaths', type=int, default=0)  # >0: smoke test on this many train/val breaths only
 p.add_argument('--seed', type=int, default=42)
 args = p.parse_args()
 
 ROOT = os.path.expanduser('~/ventilator-pressure-prediction')
 OUT = os.path.join(ROOT, 'runs', args.name); os.makedirs(OUT, exist_ok=True)
-json.dump(vars(args), open(os.path.join(OUT, 'args.json'), 'w'), indent=1)
+SCRIPT_MD5 = hashlib.md5(open(os.path.abspath(__file__), 'rb').read()).hexdigest()
 torch.manual_seed(args.seed); np.random.seed(args.seed)
-dev = 'cuda'
+dev = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def feats(df):
     df = df.copy()
@@ -76,6 +81,10 @@ class Net(nn.Module):
         h, _ = self.lstm(self.inp(x))
         return self.head(h).squeeze(-1)
 
+def submission_order(pt):
+    # predictions come out in (breath_id, time_step) order; put them back in test.csv id order
+    return pd.DataFrame({'id': te.id.values, 'pressure': pt.reshape(-1)}).set_index('id').loc[te_order].pressure.values
+
 def predict(model, X):
     model.eval(); out = []
     with torch.no_grad():
@@ -85,12 +94,16 @@ def predict(model, X):
 
 for k in [int(f) for f in args.folds.split(',')]:
     va = fold_of == k; trn = ~va
+    if args.debug_breaths:
+        trn = trn & (np.cumsum(trn) <= args.debug_breaths); va = va & (np.cumsum(va) <= args.debug_breaths)
+    json.dump(dict(vars(args), fold=k, script=os.path.basename(__file__), script_md5=SCRIPT_MD5),
+              open(f'{OUT}/fold{k}_args.json', 'w'), indent=1)
     flat = Xtr_raw[trn].reshape(-1, len(FEATS)).astype('float64')
     mu = flat.mean(0).astype('float32'); sd = (flat.std(0, ddof=1) + 1e-6).astype('float32'); del flat
     np.save(f'{OUT}/fold{k}_scaler.npy', np.stack([mu, sd]))
     Xtr = (Xtr_raw - mu) / sd; Xte = (Xte_raw - mu) / sd
     model = Net(len(FEATS)).to(dev)
-    opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-5)
+    opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd)
     steps = args.epochs * int(np.ceil(trn.sum() / args.bs))
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=args.lr, total_steps=steps, pct_start=0.05)
     Xt, Yt, Mt = [torch.from_numpy(a[trn]) for a in (Xtr, Ytr, Mtr)]
@@ -108,10 +121,11 @@ for k in [int(f) for f in args.folds.split(',')]:
         log.append(dict(epoch=ep, train=tl / len(Xt), val_mae=vmae, sec=time.time() - t0)); pd.DataFrame(log).to_csv(f'{OUT}/fold{k}_log.csv', index=False)
         if vmae < best:
             best = vmae; torch.save(model.state_dict(), f'{OUT}/fold{k}_best.pt'); np.save(f'{OUT}/fold{k}_oof.npy', pv)
+            np.save(f'{OUT}/fold{k}_test_best.npy', submission_order(predict(model, Xte)))   # best-so-far test preds
         print(f'fold {k} ep {ep} train {tl/len(Xt):.4f} val_insp_mae {vmae:.4f} best {best:.4f} {time.time()-t0:.1f}s', flush=True)
     model.load_state_dict(torch.load(f'{OUT}/fold{k}_best.pt'))
     pt = predict(model, Xte)
-    s = pd.DataFrame({'id': te.id.values, 'pressure': pt.reshape(-1)}).set_index('id').loc[te_order].reset_index()
+    s = pd.DataFrame({'id': te_order, 'pressure': submission_order(pt)})
     np.save(f'{OUT}/fold{k}_test.npy', s.pressure.values)
     s.to_csv(f'{OUT}/fold{k}_submission.csv', index=False)
     print(f'FOLD {k} DONE best val_insp_mae {best:.5f}', flush=True)
