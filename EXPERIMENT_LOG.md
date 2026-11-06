@@ -160,3 +160,28 @@ Tool note: ensemble.py treats the value after --agg as a run name (harmless, sin
 
 - 2026-11-06: my seed-noise guess (0.005, used in the exp06/exp08 pre-registrations) was too small; one measured pair gives 0.0088.
 - 2026-11-06: my first DataHub spawn request went out with the GPU profile instead of CPU-only (the radio choice I set in JS did not take before the form submitted). The quota refused it, so there was no effect; I retried with a verified CPU-only choice.
+
+
+## 2026-11-06 day session (DataHub GPU server, user approved: submit sub06 and sub07, run the throughput test and exp09)
+Leaderboard (both submissions approved by the user in chat):
+| sub | file | models | fold-0 proxy (OOF) | LB | commit / time (UTC) |
+|---|---|---|---|---|---|
+| sub06 | sub06_exp06_5fold_mean_snap.csv | exp06 folds 0-4, mean+snap | none (5-fold not OOF-scoreable); exp06 fold-0 alone 0.21369 | 0.18383 | b2e1825, 19:36:17 |
+| sub07 | sub07_all8_mean_snap.csv | exp04 f0 + exp06 f0-4 + exp07 f0 + exp08 f0, mean+snap (exp06 has 5/8 weight) | none; the 4 fold-0 models together score 0.19266 on fold 0 | 0.18125 | 6aac2a2, 19:37:31 |
+- sub06 beat my guess band (0.195-0.205) by about 0.011-0.021: the guess was too pessimistic. sub06 vs the previous best (0.20797): -0.0241.
+- sub07 vs sub06: -0.0026 LB. NOTE: the sub07 mix (which models, equal weights per file) was chosen by the user's rule "every finished model", NOT on validation. No OOF number exists for it.
+- sub07 checks: 603,600 rows; header id,pressure; ids equal sample_submission in order; 0 NaN; all finite; all on the grid; equals snap(mean of the 8 test files). Mean |sub07 - sub06| on u_out==0 test steps: 0.0353.
+
+### Throughput test (3a): pre-registration, written before results
+- Question: for hidden 128 x 4 (not hidden 256, where the "bigger batch does not help" conclusion came from), how do time/epoch and GPU utilization depend on batch size?
+- One change: batch size 128 / 256 / 512 with LR scaled linearly (5e-4 / 1e-3 / 2e-3). Extra labelled rows: the same with the training tensors kept on the GPU (gpu_data True) instead of indexed on the CPU and copied each step as v2 does. Script src/bench_throughput.py: same step code as v2, fold-0 train breaths, 2 epochs per setting, nvidia-smi sampled every 0.5 s. Train time only (v2's logged sec also includes val prediction).
+- Expected (GUESS): about 38 / 22 / 15 s per epoch; GPU utilization >= 90% at all sizes.
+- Proven wrong if: bs 128 or 256 epoch time <= 1.1x bs 512's (batch size does not matter for speed).
+- GPU time: ~10-15 min. It measures speed only; accuracy at each batch size is NOT tested here.
+
+### exp09: pre-registration
+- Purpose: a measurement, not a test. A third seed of the exp06 config (fold 0) for the noise estimate, plus one more ensemble member.
+- One change vs exp06: seed 42 -> 44. Config: --epochs 300 --bs 512 --lr 2e-3 --hidden 128 --layers 4 (exactly exp06; not changed by the throughput result).
+- Expected (GUESS): 0.215-0.225 (the two seeds so far: 0.21491, 0.22370).
+- Would show the noise is even bigger than thought if it falls outside 0.205-0.235.
+- GPU: ~77 min. Started after the throughput test finishes.
