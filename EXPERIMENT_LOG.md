@@ -381,3 +381,23 @@ PROVEN WRONG. Primary corrector: pooled OOF 0.21584 -> 0.21676 (worse); fold gai
 - Total: 559 min (9.3 h) without N5, 636 min (10.6 h) with it, on a 12 h pod. Margin 1.4-2.7 h if the pod's GPU runs at the measured 15.0-15.4 s/epoch.
 - The script refuses to start unless runs/DAYQUEUE_DONE exists. The day queue ends ~00:53 UTC (4:53 PM PT): exp11a ~23:35, exp11b ~00:53.
 - No N3 needed at 300 epochs: exp09 is the third control.
+
+
+## sub08 (approved by the user; submitted 23:17:22 UTC, commit e252839)
+- File: sub08_all9_mean_snap.csv = mean+snap of 9 test files: sub07's 8 (exp04 f0, exp06 f0-4, exp07 f0, exp08 f0) + exp09 f0.
+- Checks: 603,600 rows; header id,pressure; ids equal sample_submission in order; 0 NaN; all finite; all on the grid; equals snap(mean of the 9 files). Mean |sub08 - sub07| on test u_out==0 steps: 0.0147.
+- LB 0.18178 vs sub07 0.18125: +0.0005, i.e. no gain. The mix was not chosen on validation (same rule as sub07: every finished model, equal weight per file). exp09 is the weakest fold-0 single (0.22432).
+- Current best stays sub07 (0.18125).
+
+## Benchmark-agent inspection (handout Section 4, step 1): BLOCKED, no code reachable (2026-11-06 ~23:15 UTC)
+What the challenge page shows (aicodinggym.com, "AI BENCHMARK, MLE-bench" panel; tooltip text, verbatim facts):
+| agent | score | description (tooltip) | model(s) | time limit | hardware | link in tooltip |
+|---|---|---|---|---|---|---|
+| Disarray | 0.15171 | runs four frontier LLMs on each competition and combines their submissions | Claude-Opus-4.5, Claude-Sonnet-4.5, GPT-5.2-Codex, Gemini-3-Pro-Preview | 24 h | 24 vCPU, 220 GB, 1x A100 | disarray.ai |
+| AIBuildAI | 1.0759 | Claude-Opus-4.6 autonomous loop: plan -> code -> train -> evaluate -> submit | Claude-Opus-4.6 | 24 h | 24 vCPU, 256 GB, 1x A100 | github.com/aibuildai/AI-Build-AI |
+| MLEvolve | 0.14237 | Gemini-3-Pro-Preview iteratively proposing, running and refining ML pipelines | Gemini-3-Pro-Preview | 12 h | 21 vCPU, 234 GB, 1x H200 | github.com/InternScience/MLEvolve |
+Where the "source" link leads: github.com/openai/mle-bench/tree/main/runs. It holds one folder per run group (disarray_group_1-3, mlevolve_group1-3; no AIBuildAI folder). Each folder holds only a grading_report JSON (Git LFS) with scores, NOT code.
+Agent repos (from the tooltips), checked by file path via the GitHub API:
+- InternScience/MLEvolve: 91 files, framework code only; no path contains "ventilat".
+- aibuildai/AI-Build-AI: 1,079 files; no path contains "ventilat".
+Result: none of the three agents' ventilator code (features, model, validation, loss mask, submission) is reachable from the links. Per the user's instruction I stopped and asked for the files instead of guessing. No claims about their methods are made until the code is attached.
