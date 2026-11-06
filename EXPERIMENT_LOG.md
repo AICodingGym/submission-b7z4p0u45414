@@ -117,3 +117,46 @@ Total per plan: 7 x 85 min = ~9.9 h of an 11 h budget.
 - MISTAKE (found by the AI in its own test run): ensemble.py v1 had no guard against partial OOF files from killed runs and reported fold 1 at 0.743. The test was run because I asked for the mean/median OOF change. (Test predictions were never affected: they only read fold*_test.npy, which a killed fold never writes.)
 - MISTAKE (caught by me): the exp05 mid-run summary misstated the numbers in its own table. It said exp05 "led early (ep25-75)" (it was behind at ep75) and "trailed by ~0.009-0.010 since ep150" (actual gaps 0.036, 0.015, 0.013, 0.010, 0.008). The table values were correct (verified against the raw stdout lines); the prose was written from a partial printout, not the data. Lesson: derive summary sentences from the printed numbers, not from memory of them.
 - MISTAKE (found by the AI when it re-read the log to verify an update): the log-update helper read EXPERIMENT_LOG.md through the browser HTTP cache, so updates were applied to stale copies and overwrote earlier sections. Undetected for several saves because the AI checked only the HTTP status (200), not the content. Fix: uncached reads, plus a re-read check after every save. Lesson: verify the written content, not the status code.
+
+
+## Overnight Plan B results (pod m9do-2812086; read 2026-11-06 ~19:15 UTC from a CPU-only DataHub server)
+Run integrity (from runs/overnight_B.txt and the files): queue start 01:38:09 UTC, done 10:32:36 UTC. 7/7 runs have START and END lines; each has 300/300 epochs, script md5 290e9fa4, the planned args (wd, seed), all 6 per-fold files, a test.npy with 603,600 finite rows equal to test_best.npy, and no Traceback/Error/nan/Killed in stdout. Nothing under runs/ was written after 10:32 UTC. Median 14.9-15.1 s/epoch, ~76-77 min per run.
+Eval-mode train MAE: new src/eval_train.py (CPU; best checkpoint; model.eval(); u_out==0 steps only; the fold's own saved scaler; Net and feats taken verbatim from train_lstm_v2.py via ast, md5-checked). Its recomputed val MAE equals the logged best and the saved OOF file to 1e-6 for all 7 models (audit pass).
+
+| run | fold | single change | OOF MAE (best ep) | eval train MAE | val/train | pre-registered | verdict |
+|---|---|---|---|---|---|---|---|
+| exp06 | 0 | v2 scalers (vs exp04) | 0.21491 (290) | 0.09833 | 2.19 | 0.2162 +/- 0.005; wrong if off by > 0.005 | consistent (-0.0013 vs exp04). Caveat: seed noise (0.0088) > 0.005, so this test could not detect a leak effect smaller than the noise. |
+| exp07 | 0 | wd 1e-5 -> 1e-2 (vs exp06) | 0.21079 (273) | 0.10339 | 2.04 | 0.205-0.215; wrong if >= exp06 - noise = 0.20612 | falsification criterion MET (0.21079 >= 0.20612): not shown to help. It lands inside the expected range and is -0.0041 vs exp06, but that is under one seed-noise unit. Gap narrowed only slightly (2.19 -> 2.04: train +0.0051, val -0.0041). |
+| exp08 | 0 | seed 42 -> 43 (vs exp06) | 0.22370 (287) | 0.09611 | 2.33 | exp06 +/- 0.005 (measurement) | outside my guessed band (+0.0088): the 0.005 noise guess was too small. |
+| exp06 | 1-4 | fold | 0.21514 / 0.21981 / 0.21442 / 0.21492 | 0.09647 / 0.09753 / 0.10006 / 0.09964 | 2.23 / 2.25 / 2.14 / 2.16 | each within +/- 0.01 of fold 0; wrong if any > 0.02 off | PASS: largest deviation +0.0049 (fold 2). 5 folds: mean 0.21584, SD 0.00223, range 0.00539. |
+
+Pick rule (pre-registered, applied by overnight.sh): base 0.21491, chal 0.21079, seed 0.22370, noise 0.00879, threshold 0.20612 -> exp06 for folds 1-4.
+
+Seed noise, how far to trust it: one pair is one draw. sigma_hat = 0.0088/sqrt(2) = 0.0062; the 95% chi-square interval with 1 df is [0.0028, 0.198], so it is nearly uninformative. Cross-check (a different quantity): exp06's fold-to-fold SD is 0.0022, but all folds share seed 42, so it probably understates seed noise. If seed SD were 0.0022, a 0.0088 gap would have p ~ 0.005 (computed). So seed variance is probably larger than the fold spread (an inference, not measured). Consequence: single-run fold-0 comparisons cannot resolve effects < ~0.01. Future one-change tests need >= 2 seeds per arm.
+
+Fold-0 ensembles (same breaths, all models trained without fold 0; computed in the kernel):
+| models | n | mean | mean+snap | median | median+snap |
+|---|---|---|---|---|---|
+| 02+04 (current LB best, 0.20797) | 2 | 0.21251 | 0.21126 | - | - |
+| 06 alone | 1 | 0.21491 | 0.21369 | - | - |
+| 06+08 (same config, 2 seeds) | 2 | 0.20384 | 0.20248 | - | - |
+| 04+06 | 2 | 0.20160 | 0.20025 | - | - |
+| 06+07+08 | 3 | 0.19667 | 0.19524 | 0.19692 | 0.19552 |
+| 04+06+07 | 3 | 0.19552 | 0.19411 | 0.19638 | 0.19502 |
+| 04+06+07+08 | 4 | 0.19409 | 0.19266 | 0.19304 | 0.19158 |
+| 02+04+06+07+08 | 5 | 0.19598 | 0.19450 | 0.19483 | 0.19340 |
+- Data: averaging models is the largest gain measured so far (2 seeds of one config: -0.011 vs the better single; 4 models: about -0.020). The models have high variance; this matches the 2.2x train/val gap.
+- Data: mean vs median is mixed (mean better at n=3, median better at n=4 and 5). One fold, so not settled.
+- Data: snap gives -0.0012 to -0.0014 on every row and every fold [COMPETITION-SPECIFIC?].
+- Caveat: choosing the best subset on fold 0 and scoring it on fold 0 is optimistic.
+
+5-fold test ensemble of exp06 (NOT submitted): submissions/sub05_exp06_5fold_mean.csv and sub06_exp06_5fold_mean_snap.csv (submission.csv now = sub06). Also submissions/cand_all9_mean.csv (all 9 test files incl. exp02; candidate only). Checks for sub05/sub06: 603,600 rows; header id,pressure; ids equal sample_submission in order; 0 NaN; all finite; sub06 100% on the pressure grid; sub05 equals the mean of the 5 fold test files.
+- A 5-fold test ensemble cannot be OOF-scored (models for folds 1-4 trained on fold-0 breaths). Fair fold-0 comparison: exp06 fold-0 alone 0.21369 (snap) vs current best 02+04 0.21126 (mean+snap): the single model is 0.0024 worse. Averaging proxy on the same breaths: 06+08 0.20248, 06+07+08 0.19524 (mean+snap).
+- Data: the fold models disagree on test (mean |fold0 - fold k| on u_out==0 test steps 0.169-0.177), so averaging should help.
+- GUESS: LB for sub06 is 0.195-0.205.
+
+GPU quota: at 19:13 UTC a DataHub spawn with a GPU was refused ("GPU quota exceeded ... 1 already in use"). So a GPU pod (probably m9do-2812086) still holds the user's only GPU, 8.7 h after the queue finished. Not touched; deleting it is the user's call.
+Tool note: ensemble.py treats the value after --agg as a run name (harmless, since no such run dir exists). Fix in its next version.
+
+- 2026-11-06: my seed-noise guess (0.005, used in the exp06/exp08 pre-registrations) was too small; one measured pair gives 0.0088.
+- 2026-11-06: my first DataHub spawn request went out with the GPU profile instead of CPU-only (the radio choice I set in JS did not take before the form submitted). The quota refused it, so there was no effect; I retried with a verified CPU-only choice.
