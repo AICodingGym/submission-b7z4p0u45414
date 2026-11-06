@@ -62,7 +62,8 @@ Best-so-far val (cummin) at the same epochs, exp04 / exp05: ep125 0.2873 / 0.294
 - Eval-mode, best checkpoint, scored steps, same 5,000 train-fold breaths (RandomState(1)) and all 13,584 fold-0 breaths: exp04 TRAIN 0.09912 / VAL 0.21621 (ratio 2.18); exp05 TRAIN 0.12429 / VAL 0.21830 (ratio 1.76).
 - Verdict vs pre-registration: prediction 0.20 FAILED (0.2183). Criterion "proven wrong if OOF >= 0.216": MET, so the hypothesis that dropout improves OOF is rejected at that threshold. Criterion "ratio stays >= 2x": not met (1.76). Dropout narrowed the gap mostly by RAISING train error (0.099 -> 0.124), not by lowering val error.
 - exp05 vs exp04: +0.0021, below the 0.005 noise GUESS, so the head-to-head is INCONCLUSIVE. Seed noise is still unmeasured.
-- Decision: by the pre-stated rule (A only if exp05 < exp04), Plan B. The AI recommends B (awaiting my choice).
+- Decision: by the pre-stated rule (A only if exp05 < exp04), Plan B. The AI recommends B.
+- 2026-11-06 ~00:40 UTC: Plan B APPROVED by me. Pre-launch check: overnight.sh B runs exp06 first; its args parsed with v2's argparse equal runs/exp04/args.json on every key (epochs 300, bs 512, lr 2e-3, hidden 128, layers 4, loss_mask insp, seed 42, nfolds 5, folds 0). The only extra keys are new v2 flags at v1-equivalent values: dropout 0.0, wd 1e-5, debug_breaths 0. Only intended difference: per-fold scalers (v2). Nothing running on the DataHub web server before shutdown (no train/queue processes, GPU 0%).
 
 ## Audit 1 (2026-11-05, CPU only, while exp05 ran). Script md5 1b9fc6c3..., 116 lines
 | check | evidence | result |
