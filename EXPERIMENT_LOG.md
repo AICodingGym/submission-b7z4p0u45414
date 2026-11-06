@@ -235,3 +235,38 @@ Timing (estimate from 15.3 s/epoch + ~1.5 min prep): exp09 ends ~20:57; T2 ends 
 Power caveat (computed on the dry run, s ~ 0.0066): T2 passes unless 150 epochs is worse by ~0.012, so a PASS means "not detectably worse", not "equivalent". T1 can only detect gains of ~0.011-0.013. Both tests are weak with 2 seeds; that is the price of single-day budgets.
 T3 (hidden 256): HELD by the user. Evidence against (from the user): exp02 (hidden 256, 120 epochs) 0.24189 vs exp04 (hidden 128, 300 epochs) 0.21621. That comparison is confounded by epochs (exp02 was still improving at epoch 120).
 - 2026-11-06 PLANNING MISTAKE (AI): I proposed a 9-hour queue for "tonight" while this server's GPU would sit idle all afternoon (exp09 ends ~1 PM PT). Caught by the user. Lesson: schedule the next decisive tests on whatever GPU is free now; keep the overnight pod for what can't fit.
+
+
+## Train-fold level diagnostic (CPU; runs/analysis/train_offset_diag.py; exp06 fold-0 model on its own training breaths, eval mode)
+| | MAE | shape-only (ORACLE CEILING) | level share | mean abs offset |
+|---|---|---|---|---|
+| train breaths (54,321) | 0.09833 | 0.08776 | 0.108 | 0.044 (median 0.025, p95 0.13) |
+| val breaths (13,584) | 0.21491 | 0.13895 | 0.353 | ~0.14 (median 0.066, p95 0.615) |
+- Level share on train by R: R5 0.157, R20 0.129, R50 0.065. On val it is ~0.38 for every R.
+- Data: the model places the level almost exactly on breaths it was trained on, but not on unseen breaths. Of the val-train gap (0.1166), 0.0654 (56%) is level error, so the level is the main thing that does not generalize.
+- Interpretation (GUESS): the network memorises each training breath's level instead of learning a rule that carries over. Consistent with: the offset is not predictable from simple summaries (R^2 0.009), dropout and wd 1e-2 barely moved the gap, and exp02 (hidden 256) was worse.
+
+### T3 (hidden 256): recommendation DROP for now
+- The user's point stands: exp02 (hidden 256) 0.242 vs exp04 (hidden 128) 0.216, though confounded by 120 vs 300 epochs.
+- New evidence: the failure is generalization of a memorised breath-level quantity, not underfitting (train MAE 0.098, train level share 11%). More capacity mainly adds memorization room.
+- I cannot argue T3 is worth ~5 GPU-hours (2 seeds x ~2.5 h).
+
+### Proposed instead (NOT run; awaiting approval): L1, a CPU level-corrector test, 0 GPU
+- Question: is the per-breath offset recoverable from the full input sequence by another learner? If not, stop chasing it with model changes.
+- Hypothesis: part of exp06's held-out offset is predictable from the full u_in sequence, the u_out pattern, R, C, and the model's own predicted inspiratory pressures.
+- One change: subtract a predicted per-breath offset from exp06's predictions (model unchanged).
+- Data: exp06 OOF from all 5 folds (67,905 breaths). The corrector for fold k is trained only on the other 4 folds' OOF residuals, then applied to fold k (clean CV, no test data). Learner: HistGradientBoosting.
+- Expected (GUESS): CV R^2 of the offset 0.00-0.10; 5-fold OOF 0.21584 -> 0.211-0.216.
+- Proven wrong if: R^2 < 0.02, or the OOF does not improve by >= 0.002 on at least 4 of 5 folds (paired comparison on the same predictions, so seed noise does not apply).
+- CPU ~10 min. Not competition-specific: post-hoc residual stacking.
+
+## Evening queue (12 h pod): DRAFT, decided after T2 (and T1 if it is done in time)
+Principle: every arm targets breath-level memorization, has one change and 2 seeds (42/43), and is compared with the day-queue reference at the same epoch count.
+| arm | single change | hypothesis | GPU (150 ep / 300 ep) | needs code? |
+|---|---|---|---|---|
+| N1 | bs 512 -> 128, LR 2e-3 -> 5e-4 (scaled) | 4x more, noisier updates per epoch regularize; same wall time (measured 14.7 vs 13.8 s/epoch) | 2 x 41 / 2 x 80 min | no |
+| N2 | wd 1e-5 -> 1e-2, 2 seeds | re-test exp07's -0.0041 hint properly; decoupled wd penalizes the large weights that memorization needs | 2 x 40 / 2 x 78 | no |
+| N3 | control seed 44 at the day queue's epoch count | firms up the noise estimate for that epoch count | 1 x 40 / 1 x 78 | no |
+| N4 | input-noise augmentation on raw u_in during training (features recomputed) | makes exact u_in sequences unmemorisable, forcing a rule | 2 x ~45 / 2 x ~85 | yes (v3; CPU smoke test before launch) |
+| N5 | if T1 adopted: T1 + N-winner combination; else a 3rd seed of T1 | - | 2 x 40 | no |
+At 150 epochs N1-N5 is about 6.5 h, leaving room for N4 at 2 more seeds or folds of the best config. At 300 epochs, drop N5 and N4's second seed.

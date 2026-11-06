@@ -1,0 +1,4 @@
+TRAIN fold (exp06 f0, eval mode): MAE 0.09833 shape-only (oracle) 0.08776 level share 0.108 | |offset| median 0.025 p95 0.13 mean 0.044
+ R 5 mean |offset| train 0.042 level share 0.157
+ R 20 mean |offset| train 0.047 level share 0.129
+ R 50 mean |offset| train 0.044 level share 0.065
