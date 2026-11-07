@@ -424,3 +424,60 @@ Source link on the leaderboard: github.com/openai/mle-bench/tree/main/runs (grad
 - G3 (UNTESTED GUESS): submission row-order / id misalignment in part of the file. A full misalignment would usually score much worse than 1.08, so it would have to be partial.
 - G4 (UNTESTED GUESS): ran out of its time budget and submitted an early or fallback model.
 - The leaderboard score alone cannot separate these.
+
+
+## Sat Nov 7: evening-queue results (pod, 06:46-15:55 UTC) and fold-0 analysis
+- Completion check (runs/evening.txt): all 7 runs started and printed "FOLD 0 DONE" (exp12a, exp12b, exp13b, exp15a, exp15b, exp12c, exp13c). exp11c was skipped as designed (T1 REJECT). EVENING_DONE was written at 15:55 UTC. Every run has fold0_oof / fold0_test / fold0_best.pt.
+- runs/decision_evening.json on disk was a stale dry run (Nov 6 23:08). Re-ran src/decide_evening.py today; it overwrote the file.
+- Controls: exp06/08/09 = 0.21491 / 0.22370 / 0.22432, mean 0.22098, s 0.00527. Rule: ADOPT if mean(arm) < mean(ctrl) - 2*s*sqrt(1/n + 1/3).
+
+| arm | change | runs (fold-0 OOF) | n | mean | diff vs ctrl | threshold | pre-registered expectation | verdict |
+|---|---|---|---|---|---|---|---|---|
+| T1 | loss on all 80 steps | exp11a 0.22190, exp11b 0.21915 | 2 | 0.22052 | -0.00045 | 0.21136 | 0.205-0.215, and level share drops | REJECT. Proven wrong on both criteria: rule not met; level share 0.348 / 0.359 vs controls 0.353-0.361 (no drop) |
+| N1 | bs 512 -> 128 (LR 2e-3 unchanged) | exp12a 0.20142, exp12b 0.20460, exp12c 0.20869 | 3 | 0.20490 | -0.01607 | 0.21238 | ref - 0.005 (range -0.015 to +0.010) | ADOPT. All 3 seeds beat the best control. Effect larger than my range |
+| N2 | wd 1e-5 -> 1e-2 | exp07 0.21079, exp13b 0.21701, exp13c 0.21783 | 3 | 0.21521 | -0.00576 | 0.21238 | ref - 0.006 | NOT ADOPTED (point guess matched, but the rule is not met; could be noise) |
+| N4 | 1% multiplicative u_in noise (v3) | exp15a 0.23915, exp15b 0.24536 | 2 | 0.24225 | +0.02128 | 0.21136 | ref - 0.006 | REJECT. Proven wrong: clearly worse |
+
+### N1 mechanism: my hypothesis was WRONG even though the arm passed
+- Pre-registered hypothesis: "4x more, noisier updates regularize against breath memorization".
+- Eval-mode train MAE (src/eval_train.py, runs/eval_train.csv): exp12a/b/c 0.0572 / 0.0568 / 0.0591 vs controls exp06/08/09 0.0983 / 0.0961 / 0.0980. N2 exp13b/c 0.0983 / 0.1033.
+- bs 128 fits the TRAIN fold far better, not worse. The train/val ratio rose from about 2.2 to 3.5. So it is not regularization.
+- Better reading (inference): the bs-512 runs were optimization-limited. bs 128 gives 4x the optimizer steps, and both train and val improve. This agrees with T2 (half the epochs cost +0.035).
+
+### Per-breath level offset after the evening runs (runs/analysis/evening_fold0.py, .txt)
+- Level share = 1 - MAE(err - per-breath mean insp residual) / MAE(err). This is an ORACLE decomposition, not an achievable score.
+- Controls (exp06/08/09), mean of single runs: mean |offset| 0.1630, shape-only MAE 0.1419, level share 0.357.
+- N1 (exp12a/b/c), mean of single runs: mean |offset| 0.1527 (-6%), shape-only MAE 0.1297 (-9%), level share 0.367.
+- Ensembles: N1 mean-of-3 OOF 0.18517, |offset| 0.1407, shape 0.1129, level share 0.391. S8 mean-of-5 0.19339, level share 0.386.
+- Per-breath offset correlation: between N1 seeds 0.76-0.80; exp06 vs exp12a 0.73.
+- Interpretation (inference): averaging models removes shape error faster than level error, so most of the level offset is SHARED across models (systematic), not seed noise. bs 128 shrank both parts; nothing so far targets the level specifically (L1 corrector, T1 and ensembling all failed to).
+
+### Stacking
+- Only N1 passed, so the stacked config is the exp06 config with bs 128. It is the NEW REFERENCE: 3 seeds, mean 0.20490, SD 0.00364. Pooled SD with the old controls: 0.00453.
+- N2 is not stacked because it failed its rule.
+
+### Ensemble check on fold 0 (MEAN + snap to the train pressure grid [COMPETITION-SPECIFIC?])
+- PROCESS SLIP: I did not write the expected value down before running this comparison. The candidate sets were fixed before the run, and the primary candidate (C1) was named in the script before it ran.
+- S7 reproduces sub07's logged fold-0 value, 0.19266, which confirms the row order.
+
+| set | models (fold 0) | mean | mean+snap |
+|---|---|---|---|
+| S7 (sub07 fold-0 set) | exp04, 06, 07, 08 | 0.19409 | 0.19266 |
+| S8 (sub08 fold-0 set) | S7 + exp09 | 0.19339 | 0.19193 |
+| C1 primary | S8 + exp12a/b/c | 0.18429 | 0.18270 |
+| C2 | exp12a/b/c only | 0.18517 | 0.18355 |
+| C3 | C1 + exp13b/c + exp11a/b | 0.18399 | 0.18240 |
+
+- sub09 = C1: runs/ensemble_sub09_stdout.txt, submissions/sub09_S8_plus_N1_mean_snap.csv (md5 512bc61d).
+- The test average uses 12 files: exp04 f0, exp06 f0-4, exp07, exp08, exp09, exp12a/b/c.
+- Format checks passed: shape (603600, 2); columns id, pressure; ids in sample_submission order; 0 NaN; every value on the grid. Mean abs diff vs sub07 on u_out==0 rows is 0.0287.
+- NOT SUBMITTED; asking the user first.
+- Caveat: N1 is 3 of 8 models on fold 0 but 3 of 12 test files, so the fold-0 gain (-0.010 vs S7) probably overstates the LB gain. C3 was 0.0003 better than C1 on fold 0; I did not pick it, because choosing by a 0.0003 fold-0 difference would overfit.
+
+### Timing: bs 64 (for queue planning)
+- Measured with a 3-epoch run, runs/bench_bs64.
+- Alone: 20.5 s/epoch, so about 104 min per 300-epoch run.
+- With src/eval_train.py (8 CPU threads) running at the same time: 31.0 s/epoch, +51% (runs/bench_bs64_contended).
+- My guess was 18-20 s.
+- CORRECTION to the earlier note: CPU jobs DO slow small-batch training. The earlier finding (no slowdown) was for bs 512. Rule from now on: no CPU jobs while a bs <= 128 run trains.
+- For comparison, bs 128 (exp12a) runs at 16.1-16.8 s/epoch.
