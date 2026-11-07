@@ -603,3 +603,53 @@ Total about 290 min. A 20:00 UTC start ends about 00:50 UTC (4:50 PM PT), 46 min
   - H1's pair-average gain far below 0.03 (say < 0.015) -> its fewer-models penalty and plateau are worse than modelled; prefer more h128 models unless H1's single-model gain is large.
   - exp12a fold 1 >= 0.2101 (the bs128 gain does not transfer to fold 1) -> every fold-0-based choice needs re-checking before the lock.
   - Sunday's GPU hours are NOT in this budget. If tonight settles the config, Sunday adds about 10-13 more runs.
+
+
+## Night pod queue APPROVED (user, Sat Nov 7) + speed logging added
+- The user approved src/podqueue_sat.sh as drafted, and asked that it log the measured seconds/epoch for hidden 256 after the first 10 epochs (160 min is a GUESS).
+- Change made (no other edits): run() now starts training in the background and, once 11 epoch lines exist, logs "SPEED <run> :: median X s/epoch over epochs 1-10 -> projected Y min for 300 epochs". Epoch 0 is skipped because it includes warm-up. It logs this for every run; if a run ends before a check, it logs it at the end.
+- Tests:
+  - On real logs: exp12a 16.8 s (full-run median 16.1, so the first-10 read is about 4% high); exp16a 20.5; exp02 (hidden 256, bs 512) 29.2.
+  - Fake trainer: correct median, logged mid-run, END line written.
+  - bash -n passes. New md5 is in the commit.
+- Launch timing: exp16a started 20:19:25 UTC at 19.8 s/epoch -> ends ~22:00. exp16b ~23:40. exp12a fold 1 (82 min) -> ~01:02 UTC = 5:02 PM PT.
+- Launch window: from "satqueue done" (~5:05 PM PT) to the planned server stop (5:36 PM PT, unconfirmed). If the server dies early, launch anyway; the script reruns fold 1 if needed.
+- The pod (12 h) would end ~5:05 AM PT Sunday. If bs 128 and the hidden-256 guess hold, the queue ends ~2:35 AM PT.
+
+## Sunday plan (pre-registered Sat Nov 7, before any H1/D1 result is known)
+### Sunday daytime (DataHub server, ~330 usable GPU-min)
+- "Closest to winning" = the arm (H1 hidden 256, D1 bs 64) with the lowest diff = 2-seed mean - reference mean, provided diff < 0. If neither diff is < 0, nothing is close.
+- Case A (D1 REJECT; H1 ran at bs 128):
+  - The closest arm gets seed 44: exp18c (h256/bs128, ~160 min GUESS) or exp16c (bs64, ~100 min). This applies even if it already passed on 2 seeds, so the lock rests on 3.
+  - The rest of the day goes to reference-config folds (exp12b folds 1, 2, ... at 82 min each).
+  - If nothing is close: all slots go to reference folds.
+- Case B (D1 ADOPT; the reference is bs 64 with 2 seeds; H1 ran at bs 64):
+  - exp16c (D1 seed 44) first, so the bs-64 decision rests on 3 seeds.
+  - Then exp18c (H1 seed 44 at bs 64, ~190 min GUESS) if H1's diff vs the bs-64 reference is < 0.
+  - Otherwise reference folds.
+### Sunday evening: LOCK by these rules
+- Arm adopted if mean over ALL its seeds < ref_mean - 2*0.00453*sqrt(1/n + 1/n_ref). With 3 vs 3 seeds against N1, the threshold is 0.20490 - 0.00740 = 0.19750.
+- A third seed CAN overturn a 2-seed pass.
+- If H1 and D1 are both adopted in case A (tested separately), the untested combination is NOT stacked. Pick the one with the lower budget-model estimate E(K) = s1 - d(1 - 1/K), using its K from the table below and its own measured d (from its 2-3 seed subsets).
+- In case B, adopting H1 means h256/bs64.
+- Nothing adopted -> lock bs128/h128.
+- I will write and commit the lock script BEFORE reading the Sunday third-seed result.
+### Sunday night: first final-ensemble pod
+- Launched Sunday night, not Monday: the locked config, seeds 43/44 over folds 0-4, in an order that fills missing folds first.
+
+### Final-ensemble budget REWRITTEN: Sunday-night pod + Mon-Wed
+- GPU hours (ASSUMPTION/GUESS): Sunday-night pod about 11 usable h (12 nominal), plus Mon-Wed 30-34 h. Planned 41-45 h; ceiling 54 h.
+
+| config | min/run | runs at 41 h | 45 h | 54 h | 5-fold sets at 45 h | breakeven single-model fold-0 OOF vs bs128 at 45 h |
+|---|---|---|---|---|---|---|
+| bs128 / h128 | 82 (measured) | 30 | 32 | 39 | 6.4 | - (0.2049 measured) |
+| bs64 / h128 | 100 (measured) | 24 | 27 | 32 | 5.4 | < 0.2047 |
+| h256 / bs128 | 160 (GUESS; tonight's SPEED line replaces it) | 15 | 16 | 20 | 3.2 | < 0.2040 |
+| h256 / bs64 | 190 (GUESS) | 12 | 14 | 17 | 2.8 | < 0.2037 |
+
+- Model (GUESS beyond the data): bs128 at K = 32 -> 0.1753 + 0.0296/32 = 0.1762 on the fold-0 proxy, no snap.
+- Already banked (not counted above), if bs 128 is locked:
+  - Reference seed 42 on folds 0-4 (exp12a f0 + today's f1 + tonight's f2-f4).
+  - exp12b/c on f0.
+  - Sunday-daytime fill folds.
+- The conclusion is unchanged: the 1/K term left over is 0.0009-0.0021, so any real single-model gain of about 0.002+ wins. Switch config only on a rule pass.
