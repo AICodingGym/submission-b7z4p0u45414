@@ -401,3 +401,26 @@ Agent repos (from the tooltips), checked by file path via the GitHub API:
 - InternScience/MLEvolve: 91 files, framework code only; no path contains "ventilat".
 - aibuildai/AI-Build-AI: 1,079 files; no path contains "ventilat".
 Result: none of the three agents' ventilator code (features, model, validation, loss mask, submission) is reachable from the links. Per the user's instruction I stopped and asked for the files instead of guessing. No claims about their methods are made until the code is attached.
+
+
+## Benchmark agent source unavailable (logged Sat Nov 7, from notes made Fri night while DataHub was off)
+
+"Benchmark agent source unavailable: the source link holds only grading reports; no ventilator code in the MLEvolve or AI-Build-AI repos."
+
+The user confirmed MLE-bench publishes only grading reports, so the inspection is CLOSED. No agent files are coming.
+
+Leaderboard tooltip table (all we know about the three agents):
+| agent | LB MAE | what it is | budget | hardware | linked source |
+|---|---|---|---|---|---|
+| Disarray | 0.15171 | 4 LLMs combined: Opus 4.5, Sonnet 4.5, GPT-5.2-Codex, Gemini 3 Pro | 24 h | A100 | disarray.ai |
+| AIBuildAI | 1.0759 | Claude Opus 4.6 plan-code-train-evaluate-submit loop | 24 h | A100 | github.com/aibuildai/AI-Build-AI |
+| MLEvolve | 0.14237 | Gemini 3 Pro iterative pipelines | 12 h | H200 | github.com/InternScience/MLEvolve |
+Source link on the leaderboard: github.com/openai/mle-bench/tree/main/runs (grading reports only; Git LFS pointers).
+
+### Why did AIBuildAI score 1.08? Every item below is an UNTESTED GUESS (no code was available)
+- Reference points from our own data: per-(R,C,step) median baseline 6.08; global median 7.54; our first 120-epoch LSTM 0.242. So 1.08 learned real signal but missed something big.
+- G1 (UNTESTED GUESS): a per-row tabular model (e.g. GBM) with little or no within-breath sequence context. The error size is plausible.
+- G2 (UNTESTED GUESS): training, early stopping or model selection on all 80 steps instead of u_out==0. Partial evidence AGAINST this being the whole story: our T1 (loss on all steps, exp11a/b) stayed near 0.22, not 1.0.
+- G3 (UNTESTED GUESS): submission row-order / id misalignment in part of the file. A full misalignment would usually score much worse than 1.08, so it would have to be partial.
+- G4 (UNTESTED GUESS): ran out of its time budget and submitted an early or fallback model.
+- The leaderboard score alone cannot separate these.
