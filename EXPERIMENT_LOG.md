@@ -507,3 +507,99 @@ Total about 290 min. A 20:00 UTC start ends about 00:50 UTC (4:50 PM PT), 46 min
   - Proven wrong (the bs 128 gain does not carry over) if fold-1 OOF >= 0.2101, i.e. less than 0.005 better than exp06 fold 1. This is one run vs one run, so the seed-noise SE of the difference is about 0.007; read with care.
 - Why there are NOT 2 more seeds of the "stacked config": only N1 passed, so the stacked config IS N1, which already has 3 seeds. The slot goes to fold 1 instead.
 - Why no second level-targeted idea today: the only level-specific candidate with some support is more capacity (the offset is shared across models, which points at bias). That is hidden 256: 2 seeds x ~170 min at bs 128 (GUESS), which does not fit. Proposed for tonight's 12 h pod.
+
+
+## Sat Nov 7 afternoon: sub09 submitted, Saturday queue started
+- The user approved both ("Approved: submit sub09, and start the Saturday queue now").
+- src/satqueue.sh (md5 e65975e9) started 20:19:25 UTC.
+- Measured bs 64 speed in exp16a: 19.6 s/epoch, about 99 min per run.
+- Projected ends: exp16a ~21:59, exp16b ~23:39, exp12a fold 1 ~01:02 UTC. That leaves 34 min before the planned (unconfirmed) 01:36 UTC stop.
+
+| when (UTC) | what | OOF fold 0 | LB | evidence |
+|---|---|---|---|---|
+| 2026-11-07 20:19:44 | sub09 = sub08's models + exp12a/b/c (bs 128), MEAN+snap, submissions/sub09_S8_plus_N1_mean_snap.csv (md5 512bc61d) | 0.18270 | **0.17685 (new best; sub07 was 0.18125)** | CLI "Score: 0.17685"; git fa7205d. Approved by the user |
+
+- The fold-0 gain vs sub07 was -0.0100; the LB gain is -0.0044, as the caveat expected (N1 is 3 of 12 test files).
+
+## Note: the train/val gap GREW while validation improved (contradicts our starting framing)
+- N1 (bs 128): eval-mode train MAE 0.057 vs val 0.205 (ratio about 3.5). The bs-512 controls: train 0.098 vs val 0.221 (ratio about 2.2).
+- So the gap grew by about 0.025 in absolute terms, and validation still improved by 0.016.
+- This contradicts the "close the train/val gap" framing we started with, which treated the gap as memorization to be shrunk. That framing drove N2 (weight decay), N4 (input noise), exp05 (dropout), and the call to DROP hidden 256. All three regularizers failed to beat the controls.
+- A large gap is not the problem by itself. What predicts validation here is how well the model is optimized. Lower train error came WITH lower val error.
+- Best-epoch check: N1's best val epochs were 266, 261 and (exp12c) late in the run. The last-10-epoch minimum is within 0.0002 of the best. So there is no late-epoch overfitting either.
+
+## Reconciling the capacity reasoning (hidden 256)
+- Yesterday's argument (section "T3 (hidden 256): recommendation DROP"): the failure is generalization of a memorized breath-level quantity, not underfitting (train 0.098), so more capacity mainly adds memorization room.
+- What changed:
+  - (1) N1 cut train error 0.098 -> 0.057 and val improved. The premise "lower train error means more memorization and worse val" is contradicted in this regime.
+  - (2) The level offset is mostly SHARED across seeds (corr 0.76-0.80; averaging seeds removes shape error faster than level error). Shared error is bias of the model class, not seed variance. Capacity is a bias lever.
+  - (3) A comparison I MISSED (the data existed once T2 finished on Nov 6):
+    - exp02 = hidden 256, bs 512, lr 2e-3, **120** epochs: 0.24189.
+    - exp10a/b = hidden 128, bs 512, lr 2e-3, **150** epochs: 0.25689 / 0.25429 (mean 0.2556).
+    - So hidden 256 beat hidden 128 by about 0.014 with FEWER epochs.
+    - Confounds: one seed for hidden 256; v1 vs v2 script (same 31 features, same split code; v1 had wd 1e-5 hard-coded = v2's default).
+    - Yesterday's exp02-vs-exp04 comparison (0.242 vs 0.216) compared 120 with 300 epochs, and epochs turned out to matter a lot (T2: +0.035 for 150 vs 300).
+- Conclusion: the case for hidden 256 is now positive, not negative. It goes first on tonight's pod.
+
+### Saturday night pod queue: DRAFT, NOT LAUNCHED (needs the user's approval)
+- Script: src/podqueue_sat.sh (md5 b71bea51). Decision helper: src/decide_vs_ref.py (md5 060d2bbe). The helper reproduced the hand-computed threshold 0.19664 on a dry run and returns INCOMPLETE while exp16a/b are unfinished.
+- The batch size is picked automatically by the pre-registered D1 rule: bs 64 if D1 ADOPTS, otherwise bs 128. Today's measured result supports bs 128.
+
+| order | run | change | seed | GPU if bs 128 | GPU if bs 64 |
+|---|---|---|---|---|---|
+| 1 | exp18a | H1: hidden 128 -> 256 | 42 | ~160 min (GUESS: 29.3 s/epoch measured at bs 512 x 1.07, the bs-128 slowdown seen at hidden 128) | ~190 (GUESS) |
+| 2 | exp18b | same | 43 | ~160 (GUESS) | ~190 (GUESS) |
+| 3 | exp12a fold 1 | none; only if today's fold-1 run did not finish | 42 | 82 | (exp16a fold 1) 99 |
+| 4-6 | reference config folds 2, 3, 4 | none (final-ensemble coverage) | 42 | 3 x 82 | 3 x 99 |
+
+- Total if bs 128: 566 min (648 if fold 1 has to be rerun), on a 720-min pod.
+- Total if bs 64: about 776 min. That is over 12 h, so fold 4 would be cut off. Each run saves when it finishes, so only the run in progress would be lost.
+
+- H1 pre-registration:
+  - Hypothesis: the model is bias- and optimization-limited, not memorization-limited. More capacity lowers the shared (systematic) error, including the per-breath level offset. Not competition-specific.
+  - Change: hidden 128 -> 256, at the reference batch size. Nothing else changes.
+  - Expected fold-0 OOF (GUESS): 2-seed mean = reference - 0.008 (range -0.020 to +0.010).
+  - Rule: ADOPT if mean < reference mean - 2*0.00453*sqrt(1/2 + 1/3). If bs 128 is the reference, that is 0.19664.
+  - Proven wrong if the mean is >= the reference mean (no gain). Also proven wrong on the mechanism if mean |offset| falls by no more than the 6% that bs 128 gave (the hypothesis says capacity hits the shared/level part specifically).
+  - Also report: the pair-average gain (2-seed mean minus their average). It estimates this config's seed-variance term d for the budget model below.
+
+## Final-ensemble compute budget (config locks Sunday night; runs Mon morning - Wed night)
+- GPU hours available: ASSUMPTION/GUESS. One GPU per user. Mon day server (6 h) + Mon night pod (12 h) + Tue day (6 h) + Tue night (12 h) + Wed day (6 h) = 42 h nominal. With relaunch gaps and margins, plan on 30-34 h; 42 h is the ceiling.
+- Per-run times (300 epochs, one fold, including ~1 min data load):
+  - bs 128 / h128: 82 min, MEASURED (exp12a/b/c).
+  - bs 64 / h128: ~100 min, MEASURED (19.6 s/epoch in exp16a).
+  - h256 / bs 128: ~160 min, GUESS.
+  - h256 / bs 64: ~190 min, GUESS.
+
+| candidate | runs in 30 h | 34 h | 42 h | full 5-fold sets at 34 h |
+|---|---|---|---|---|
+| bs128 / h128 | 21 | 24 | 30 | 4.8 |
+| bs64 / h128 | 18 | 20 | 25 | 4.0 |
+| h256 / bs128 (GUESS time) | 11 | 12 | 15 | 2.4 |
+| h256 / bs64 (GUESS time) | 9 | 10 | 13 | 2.0 |
+
+### Averaging curve on fold 0 (runs/analysis/averaging_curve.py, .txt; mean of all subsets of size n, no snap)
+- bs-512 h128 family (8 models: exp06/08/09/07/13b/13c/11a/11b): n=1 0.2187, 2 0.2032, 3 0.1976, 4 0.1946, 5 0.1928, 6 0.1915, 7 0.1906, 8 0.1899.
+  - MAE(n) = c + d/n fits within about 0.001 at every n: c 0.186, d 0.033.
+- N1 bs 128 (3 models): n=1 0.2049, 2 0.1904, 3 0.1852. Fit: c 0.1753, d 0.0296. Extrapolating beyond n=3 is a GUESS.
+- Mixing: N1 plus 1-5 weaker bs-512 models gives 0.1835-0.1851 vs N1 alone 0.1852. Weaker models add almost nothing once there are 3 strong ones.
+- Estimate (model, GUESS beyond the data): E(K) = s1 - d(1 - 1/K), with d about 0.03 for both families measured.
+  - bs128 at K = 24: 0.1753 + 0.0296/24 = about 0.1765 (fold-0 proxy, no snap).
+  - The 1/K term left over is only 0.0012-0.0030 for K = 10-24. Config differences we have measured are much bigger (0.016 for bs).
+  - Breakeven single-model fold-0 OOF to beat bs128 at 24 runs:
+    - bs64 at 20 runs: < 0.2046, about 0.0003 better than N1.
+    - h256/bs128 at 12 runs: < 0.2036 (0.0013 better).
+    - h256/bs64 at 10 runs: < 0.2031 (0.0018 better).
+- Answer (inference): we are in the FEWER-STRONGER regime. Pick the config with the best single-model error, even at half the run count.
+- But a 2-seed arm's SE (~0.004) is larger than these breakevens. So: switch config only on a rule pass; otherwise keep bs128 (measured, cheapest). A mixed final ensemble costs almost nothing (see the mixing rows) and hedges.
+- Caveats:
+  - (a) d is assumed equal across configs. If h256 seeds are more correlated (smaller d), its plateau sits closer to its single-model error. The 2-seed pair average will show this.
+  - (b) The test ensemble mixes models trained on different folds, which is probably more diverse than same-fold seeds. That shifts everyone's curve similarly.
+  - (c) The fold-0 -> LB mapping is not stable: sub07 -0.0114, sub09 -0.0059.
+- What would change the answer:
+  - D1 passes (bs64 mean < 0.19664) -> bs64 becomes the base config.
+  - D1 mean >= 0.2049 -> the steps story stops at bs128.
+  - H1 passes -> h256 wins even at ~12 runs.
+  - H1's pair-average gain far below 0.03 (say < 0.015) -> its fewer-models penalty and plateau are worse than modelled; prefer more h128 models unless H1's single-model gain is large.
+  - exp12a fold 1 >= 0.2101 (the bs128 gain does not transfer to fold 1) -> every fold-0-based choice needs re-checking before the lock.
+  - Sunday's GPU hours are NOT in this budget. If tonight settles the config, Sunday adds about 10-13 more runs.
