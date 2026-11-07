@@ -481,3 +481,29 @@ Source link on the leaderboard: github.com/openai/mle-bench/tree/main/runs (grad
 - My guess was 18-20 s.
 - CORRECTION to the earlier note: CPU jobs DO slow small-batch training. The earlier finding (no slowdown) was for bs 512. Rule from now on: no CPU jobs while a bs <= 128 run trains.
 - For comparison, bs 128 (exp12a) runs at 16.1-16.8 s/epoch.
+
+
+### Saturday day queue: PROPOSED, NOT STARTED (awaiting the user's approval)
+- Script: src/satqueue.sh (md5 e65975e9). Server container started 19:36:23 UTC. Planned stop 01:36 UTC = 5:36 PM PT; the 6 h limit is UNCONFIRMED.
+- New reference: N1 (exp12a/b/c, bs 128), mean 0.20490. Pooled s 0.00453 (N1 SD 0.00364, old controls 0.00527).
+- Rule for a 2-seed arm: ADOPT if mean < 0.20490 - 2*0.00453*sqrt(1/2 + 1/3) = 0.19664 (detectable effect 0.0083).
+
+| order | run | change vs reference | seeds | GPU |
+|---|---|---|---|---|
+| 1 | exp16a | D1: bs 128 -> 64, LR 2e-3 unchanged | 42 | ~104 min (20.5 s/epoch measured) |
+| 2 | exp16b | same | 43 | ~104 min |
+| 3 | exp12a fold 1 | none (the reference config, seed 42, on fold 1) | 42 | ~82 min |
+
+Total about 290 min. A 20:00 UTC start ends about 00:50 UTC (4:50 PM PT), 46 min before the planned stop.
+
+- D1 pre-registration:
+  - Hypothesis: N1 helped through more optimizer steps (train MAE 0.098 -> 0.057, val better too), and halving the batch again (8x the steps of bs 512) continues the trend. Not competition-specific. It targets the per-breath level offset only indirectly: bs 128 cut the level part by 6% and the shape part by 9%.
+  - Expected fold-0 OOF (GUESS): 2-seed mean 0.198 (range 0.190-0.212).
+  - Proven wrong if: mean >= 0.20490, i.e. no gain beyond bs 128. Between 0.19664 and 0.20490 is inconclusive and not adopted. Instability (a val spike that does not recover) also counts against.
+  - Secondary readout: mean |offset| and level share, compared with N1 (0.1527 / 0.367).
+- exp12a fold 1 pre-registration:
+  - Purpose: test predictions for the final ensemble, and a replication of N1 on a second fold.
+  - Expected (GUESS): fold-1 OOF 0.200-0.208, vs exp06 fold 1 at 0.21514.
+  - Proven wrong (the bs 128 gain does not carry over) if fold-1 OOF >= 0.2101, i.e. less than 0.005 better than exp06 fold 1. This is one run vs one run, so the seed-noise SE of the difference is about 0.007; read with care.
+- Why there are NOT 2 more seeds of the "stacked config": only N1 passed, so the stacked config IS N1, which already has 3 seeds. The slot goes to fold 1 instead.
+- Why no second level-targeted idea today: the only level-specific candidate with some support is more capacity (the offset is shared across models, which points at bias). That is hidden 256: 2 seeds x ~170 min at bs 128 (GUESS), which does not fit. Proposed for tonight's 12 h pod.
