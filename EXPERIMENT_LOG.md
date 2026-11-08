@@ -653,3 +653,40 @@ Total about 290 min. A 20:00 UTC start ends about 00:50 UTC (4:50 PM PT), 46 min
   - exp12b/c on f0.
   - Sunday-daytime fill folds.
 - The conclusion is unchanged: the 1/K term left over is 0.0009-0.0021, so any real single-model gain of about 0.002+ wins. Switch config only on a rule pass.
+
+
+## Sun Nov 8: night pod results (podqueue_sat.sh, 01:21-12:18 UTC) and Saturday day-queue results
+- Completion: every run printed "FOLD k DONE".
+  - Day queue: exp16a f0, exp16b f0, exp12a f1 (satqueue done 01:02 UTC).
+  - Pod: exp18a f0, exp18b f0, exp12a f2, f3, f4 (podqueue done 12:18 UTC).
+  - D1 was REJECT, so the pod ran at bs 128. The fold-1 rerun was skipped because exp12a f1 had finished.
+
+| arm | runs (fold-0 OOF) | mean | diff vs N1 0.20490 | threshold (2 vs 3 seeds) | pre-registered expectation | verdict |
+|---|---|---|---|---|---|---|
+| D1 bs 64 | exp16a 0.20241, exp16b 0.20615 | 0.20428 | -0.00062 | 0.19664 | 0.198 (range 0.190-0.212); proven wrong if >= 0.20490 | NOT ADOPTED, inconclusive (between threshold and reference). My 0.198 guess was too optimistic. |
+| H1 hidden 256 (bs 128) | exp18a 0.21552, exp18b 0.21455 | 0.21504 | +0.01014 | 0.19664 | ref - 0.008 (range -0.020 to +0.010); proven wrong if >= ref | REJECT, PROVEN WRONG. Worse by 0.010, at the edge of my range. |
+
+- Hidden-256 speed, MEASURED: SPEED lines 42.6 / 41.0 s/epoch (epochs 1-10). Whole runs took 206 and 203 min wall (01:21-04:47, 04:47-08:10). My 160-min guess was WRONG by about 28%.
+- So yesterday's capacity reasoning (bias-limited -> more capacity helps) failed its test. At bs 128 and 300 epochs, hidden 256 is worse than hidden 128.
+  - The exp02-vs-exp10 comparison that motivated it was a single seed with a script change, and it did not replicate.
+  - Possible reason (GUESS, untested): hidden 256 needs a different LR or more epochs. Not pursued; no budget.
+- Reference config on other folds: exp12a (bs 128, seed 42) f1 0.19601, f2 0.20141, f3 0.20241, f4 0.19681. exp06 (bs 512) on the same folds: 0.21514 / 0.21981 / 0.21442 / 0.21492. Gains: -0.019 / -0.018 / -0.012 / -0.018.
+  - Fold-1 pre-registration ("proven wrong if >= 0.2101"): NOT wrong. The bs-128 gain transfers to every fold.
+- PROCESS NOTE: I read the 2-seed D1 and H1 results before the lock script existed (the user asked for them). The lock script (src/decide_lock.py, md5 7a07a50d, commit 51b6040) was committed before exp16c existed. exp16c is the only result it decides on that I have not seen.
+
+## Sunday day queue (pre-registered plan, started 18:55 UTC)
+- "Closest to winning" = the lowest diff, provided diff < 0. D1 -0.00062 qualifies; H1 +0.01014 does not. So exp16c (D1 seed 44) runs, then reference folds exp12b f1 and f2 (seed 43). Script: src/sunqueue.sh (md5 1489b5f6).
+- Server container started 18:53:27 UTC; planned stop 00:53 UTC = 4:53 PM PT (UNCONFIRMED).
+- Projected ends: exp16c ~20:35, exp12b f1 ~22:00, exp12b f2 ~23:25 UTC (3:25 PM PT).
+- Honest note on exp16c's decision value: for D1 to pass with 3 seeds (threshold 0.19750), exp16c would need <= 0.18394. No single run has come close to that (best 0.19601), so the lock is all but certain to be bs128/h128. The run follows the pre-registered rule anyway. Its OOF and test predictions still go into the final ensemble.
+
+## Ensemble pre-registration (written before computing)
+- C1 = sub09's run list (exp04, 06, 07, 08, 09, 12a, 12b, 12c). Its test average now also includes exp12a f1-f4, because ensemble.py uses every finished fold.
+- C4 (primary) = C1 + exp16a, exp16b (bs 64, near-N1 quality).
+- C5 = C4 + exp18a, exp18b (hidden 256: weaker, but a different architecture).
+- Expected fold-0 MEAN+snap (GUESS): C4 0.1812, C5 0.1808. C1's fold-0 value stays 0.18270 (same fold-0 models as sub09).
+- Rule:
+  - Build/propose C4 if it beats 0.18270 by >= 0.001.
+  - Prefer C5 over C4 only if C5 is >= 0.001 better than C4.
+  - If neither beats 0.18270 by >= 0.001: still propose C1-rebuilt (sub09 + exp12a f1-f4 test predictions), because the folds 1-4 OOF rows will show whether adding exp12a helps there.
+- CPU note: computed with OMP_NUM_THREADS=1 while exp16c (bs 64) trains. Expect a slowdown of a minute or two.
