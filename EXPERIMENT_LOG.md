@@ -690,3 +690,38 @@ Total about 290 min. A 20:00 UTC start ends about 00:50 UTC (4:50 PM PT), 46 min
   - Prefer C5 over C4 only if C5 is >= 0.001 better than C4.
   - If neither beats 0.18270 by >= 0.001: still propose C1-rebuilt (sub09 + exp12a f1-f4 test predictions), because the folds 1-4 OOF rows will show whether adding exp12a helps there.
 - CPU note: computed with OMP_NUM_THREADS=1 while exp16c (bs 64) trains. Expect a slowdown of a minute or two.
+
+
+### Ensemble result (runs/analysis/sun_ensemble.py, .txt)
+
+| set | fold-0 models | mean | mean+snap | pre-registered expectation |
+|---|---|---|---|---|
+| C1 (sub09's list) | 8 | 0.18429 | 0.18270 | unchanged (same fold-0 models) |
+| C4 primary (+ exp16a/b) | 10 | 0.18122 | **0.17957** | 0.1812 (GUESS) -> better than expected |
+| C5 (+ exp18a/b, h256) | 12 | 0.18129 | 0.17968 | 0.1808 (GUESS) -> wrong: h256 models do not help |
+| N1+D1 only (diagnostic, NOT a pick candidate) | 5 | 0.18052 | 0.17894 | - |
+
+- By the rule: C4 beats 0.18270 by 0.0031 (>= 0.001), so build C4. C5 is not >= 0.001 better than C4, so not chosen.
+- The diagnostic "N1+D1 only" is 0.0006 better than C4. It was not pre-registered as a pick and is under 0.001, so it is not chosen. It does hint that the old bs-512 models add nothing once there are 5 strong ones (consistent with the mixing analysis).
+- Folds 1-4, test-side evidence for the exp12a f1-f4 predictions now in the average (mean+snap):
+
+| fold | exp06 alone | exp12a alone | exp06 + exp12a |
+|---|---|---|---|
+| 1 | 0.21392 | 0.19464 | 0.18819 |
+| 2 | 0.21862 | 0.20011 | 0.19285 |
+| 3 | 0.21315 | 0.20113 | 0.19113 |
+| 4 | 0.21366 | 0.19544 | 0.18887 |
+
+So adding exp12a gains 0.022-0.026 on every fold.
+- sub10 = C4, built with ensemble.py (mean, --snap). The test average uses 18 files: exp04 f0, exp06 f0-4, exp07, exp08, exp09, exp12a f0-4, exp12b f0, exp12c f0, exp16a f0, exp16b f0.
+  - Saved as submissions/sub10_C4_mean_snap.csv (md5 e4cf020c), and as submission.csv.
+  - Format checks passed: (603600, 2); id, pressure; ids in sample order; 0 NaN; all values on the grid. Mean abs diff vs sub09 on u_out==0 rows is 0.0252.
+  - NOT SUBMITTED; asking the user.
+
+### Tonight's final-ensemble pod: DRAFT (needs the user's approval)
+- Script: src/podqueue_final1.sh (md5 79f36be7). At start it runs src/decide_lock.py and refuses unless the lock is bs128/h128 (for any other lock a new plan is needed).
+- Order fills missing folds first: exp12b (seed 43) f3, f4; exp12c (seed 44) f1-f4; exp12d (seed 45) f0, f1. It also reruns exp12b f1/f2 if today's runs did not finish.
+- Time: 8 runs x ~82 min (pod wall-clock last night: 80 / 83 / 82 min) = ~656 min on a 720-min pod.
+- After it finishes, complete 5-fold sets: seed 42 (exp12a), seed 43 (exp12b), seed 44 (exp12c), plus exp12d f0-f1.
+- Launch window: once "sunqueue done" is printed (projected ~23:20 UTC = 3:20 PM PT) and before the planned server stop (00:53 UTC = 4:53 PM PT, unconfirmed). A 3:25 PM PT launch would finish the queue ~2:25 AM PT; the pod expires ~3:25 AM PT.
+- Budget update: the hidden-256 row is moot (H1 rejected). bs128 runs at 82 min measured.
