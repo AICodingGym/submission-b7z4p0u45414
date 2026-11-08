@@ -725,3 +725,11 @@ So adding exp12a gains 0.022-0.026 on every fold.
 - After it finishes, complete 5-fold sets: seed 42 (exp12a), seed 43 (exp12b), seed 44 (exp12c), plus exp12d f0-f1.
 - Launch window: once "sunqueue done" is printed (projected ~23:20 UTC = 3:20 PM PT) and before the planned server stop (00:53 UTC = 4:53 PM PT, unconfirmed). A 3:25 PM PT launch would finish the queue ~2:25 AM PT; the pod expires ~3:25 AM PT.
 - Budget update: the hidden-256 row is moot (H1 rejected). bs128 runs at 82 min measured.
+
+
+| when (UTC) | what | OOF fold 0 | LB | evidence |
+|---|---|---|---|---|
+| 2026-11-08 18:58:37 | sub10 = C4 (sub09 models + exp16a/b + exp12a f1-f4), MEAN+snap, submissions/sub10_C4_mean_snap.csv (md5 e4cf020c) | 0.17957 | **0.17044 (new best; sub09 was 0.17685)** | CLI "Score: 0.17044"; git aeef04c. Approved by the user ("Yes, submit sub10") |
+
+- The fold-0 gain vs sub09 was -0.0031; the LB gain is -0.0064. The LB gained more than fold 0, which fits the test-side exp12a f1-f4 evidence (fold 0 cannot see those models).
+- The pod script approval is still pending; the user has not answered that yet.
