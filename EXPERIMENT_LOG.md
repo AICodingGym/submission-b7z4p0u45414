@@ -733,3 +733,5 @@ So adding exp12a gains 0.022-0.026 on every fold.
 
 - The fold-0 gain vs sub09 was -0.0031; the LB gain is -0.0064. The LB gained more than fold 0, which fits the test-side exp12a f1-f4 evidence (fold 0 cannot see those models).
 - The pod script approval is still pending; the user has not answered that yet.
+
+- Pod script src/podqueue_final1.sh APPROVED by the user ("Approve pod script"). The only edit is the header comment (DRAFT -> APPROVED); md5 in this commit. The user launches it on a 12 h pod after "sunqueue done" (window 3:25-4:50 PM PT).

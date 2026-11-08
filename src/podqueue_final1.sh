@@ -1,5 +1,5 @@
 #!/bin/bash
-# FINAL-ENSEMBLE POD #1 (Sunday night 2026-11-08, 12 h dsmlp pod). DRAFT: launch only after the user approves,
+# FINAL-ENSEMBLE POD #1 (Sunday night 2026-11-08, 12 h dsmlp pod). APPROVED by the user 2026-11-08 ("Approve pod script"). Launch
 # AFTER runs/sunqueue.txt shows "sunqueue done" and the DataHub server is stopped:
 #   cd ~/ventilator-pressure-prediction && nohup bash src/podqueue_final1.sh > runs/podqueue_final1.txt 2>&1 &
 # Config comes from the pre-registered lock (src/decide_lock.py). This script is written for the expected lock bs128/h128
