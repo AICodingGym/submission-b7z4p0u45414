@@ -814,3 +814,5 @@ exp12d (seed 45) f2, f3, f4, then exp12e (seed 46) f0-f4. 8 runs. Skips any run 
 - GPU time: 8 x 83 min = 11.1 h (measured), inside the 12 h pod timeout with about 55 min of margin.
 - Proven wrong if: any run > 0.220; or the 5-seed full OOF >= 0.18439 (the 3-seed value), meaning more seeds stopped helping; or speed > 18 s/epoch (then the last run will not finish before the timeout).
 - If proven wrong on the seed curve, Tuesday's pods should change approach rather than add more seeds.
+
+- APPROVED by the user 2026-11-09 ("Approve pod #2"). Script left unchanged (header still says DRAFT) so its md5 stays c47ead9d. sub11 still not submitted: no answer yet.
