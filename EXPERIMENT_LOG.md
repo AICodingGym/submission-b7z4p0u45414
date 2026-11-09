@@ -751,3 +751,34 @@ sunqueue.sh finished: "sunqueue done Sun Nov  8 23:17:47 UTC 2026". Every run fi
 - decide_lock.py (md5 7a07a50d, committed in 51b6040 before exp16c existed) prints: LOCK bs128/h128.
 - exp12b fold speed: 16.7-16.8 s/epoch (about 84 min/run), matching the 82-min estimate.
 - GPU idle from 23:17 UTC until the pod launch (the queue ended about 1.1 h before this check).
+
+
+## Final pod #1 results (logged 2026-11-09 ~17:35 UTC)
+
+podqueue_final1.sh: "podqueue_final1 start Mon Nov  9 01:07:59 UTC 2026 :: LOCK bs128/h128" ... "podqueue_final1 done Mon Nov  9 12:12:05 UTC 2026". All 8 runs finished; runs/PODQUEUE_FINAL1_DONE exists. The pod then sat idle until its 12 h timeout (~13:08 UTC).
+
+| run (bs128/h128) | seed | fold | best val_insp_mae |
+|---|---|---|---|
+| exp12b | 43 | 3 | 0.20365 |
+| exp12b | 43 | 4 | 0.20265 |
+| exp12c | 44 | 1 | 0.20553 |
+| exp12c | 44 | 2 | 0.21602 |
+| exp12c | 44 | 3 | 0.20061 |
+| exp12c | 44 | 4 | 0.20925 |
+| exp12d | 45 | 0 | 0.20762 |
+| exp12d | 45 | 1 | 0.20456 |
+
+- exp12a, exp12b, exp12c now each have all 5 folds. exp12d has folds 0-1.
+- exp12d fold 0 (0.20762) is inside the N1 reference spread (0.20142-0.20869).
+- Run time: 82-84 min per run, 11.07 h for the 8 runs.
+- CORRECTION: on Sunday I told the user that skipping exp12b f1/f2 cut the queue to about 8.7 h. Wrong: those folds were never among the 8 runs; the real length was 11.07 h, 55 min under the 12 h timeout.
+- GPU idle from 12:12 UTC (queue done) until the next queue starts; this server started 17:26 UTC.
+
+## Monday ensemble check - PRE-REGISTRATION (written before running it)
+
+One change vs sub10 (C4): add exp12d and exp16c as members (C6). The ensemble also picks up all new fold test files automatically (exp12b f1-f4, exp12c f1-f4, exp12d f0-f1), so 29 test files instead of 18.
+- Expected fold-0 mean+snap for C6: 0.1785 (GUESS; range 0.1775-0.1795). C4 was 0.17957.
+- Proven wrong if C6 fold-0 mean+snap >= 0.17957; then sub11 uses C4 members only (still with the new fold test files).
+- Fold-0 OOF cannot see the extra test-time fold models, so also: full 5-fold OOF (folds 0-4) of mean(exp12a, exp12b, exp12c), no snap. Expected 0.185 from the averaging curve c + d/3 = 0.1753 + 0.0099 (estimate, not a guess). exp12a alone 5-fold OOF expected about 0.200.
+- Snap is [COMPETITION-SPECIFIC?] (logged before).
+- Decision: build sub11 from whichever of C6/C4 is lower on fold-0 mean+snap, run the format checks, ask the user before submitting.
