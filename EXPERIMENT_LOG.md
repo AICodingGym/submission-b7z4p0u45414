@@ -735,3 +735,19 @@ So adding exp12a gains 0.022-0.026 on every fold.
 - The pod script approval is still pending; the user has not answered that yet.
 
 - Pod script src/podqueue_final1.sh APPROVED by the user ("Approve pod script"). The only edit is the header comment (DRAFT -> APPROVED); md5 in this commit. The user launches it on a 12 h pod after "sunqueue done" (window 3:25-4:50 PM PT).
+
+
+## Sunday queue results + LOCK (logged 2026-11-09 00:40 UTC)
+
+sunqueue.sh finished: "sunqueue done Sun Nov  8 23:17:47 UTC 2026". Every run finished.
+
+| run | config | fold | best val_insp_mae |
+|---|---|---|---|
+| exp16c | bs64/h128 seed 44 | 0 | 0.21574 |
+| exp12b | bs128/h128 seed 43 | 1 | 0.21192 |
+| exp12b | bs128/h128 seed 43 | 2 | 0.20578 |
+
+- D1 (bs64) 3-seed fold-0 mean: (0.20241 + 0.20615 + 0.21574)/3 = 0.20810, vs N1 ref 0.20490 (+0.0032). The pre-registered bar needed exp16c <= 0.18394; it got 0.21574. Not adopted.
+- decide_lock.py (md5 7a07a50d, committed in 51b6040 before exp16c existed) prints: LOCK bs128/h128.
+- exp12b fold speed: 16.7-16.8 s/epoch (about 84 min/run), matching the 82-min estimate.
+- GPU idle from 23:17 UTC until the pod launch (the queue ended about 1.1 h before this check).
