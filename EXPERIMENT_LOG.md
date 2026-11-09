@@ -816,3 +816,13 @@ exp12d (seed 45) f2, f3, f4, then exp12e (seed 46) f0-f4. 8 runs. Skips any run 
 - If proven wrong on the seed curve, Tuesday's pods should change approach rather than add more seeds.
 
 - APPROVED by the user 2026-11-09 ("Approve pod #2"). Script left unchanged (header still says DRAFT) so its md5 stays c47ead9d. sub11 still not submitted: no answer yet.
+
+
+## sub11 submitted (user: "Yes, submit sub11")
+
+| time (UTC) | submission | file | LB |
+|---|---|---|---|
+| 2026-11-09 17:31:50 | sub11 = C6 (sub10 models + exp12d + exp16c, 29 fold test files), mean+snap | submissions/sub11_C6_mean_snap.csv (md5 dcff29a9) | 0.16817 |
+
+- New best: 0.16817 vs sub10 0.17044 (-0.00227). Fold 0 improved only 0.0006 (0.17957 -> 0.17894), so most of the LB gain likely comes from the 11 extra fold test files, which fold 0 cannot measure. That matches the guess written before submitting; it is still an interpretation, not a measurement.
+- Gap to benchmarks: MLEvolve 0.14237 (-0.026 to go), gold 0.1119.
