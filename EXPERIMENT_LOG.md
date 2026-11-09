@@ -782,3 +782,35 @@ One change vs sub10 (C4): add exp12d and exp16c as members (C6). The ensemble al
 - Fold-0 OOF cannot see the extra test-time fold models, so also: full 5-fold OOF (folds 0-4) of mean(exp12a, exp12b, exp12c), no snap. Expected 0.185 from the averaging curve c + d/3 = 0.1753 + 0.0099 (estimate, not a guess). exp12a alone 5-fold OOF expected about 0.200.
 - Snap is [COMPETITION-SPECIFIC?] (logged before).
 - Decision: build sub11 from whichever of C6/C4 is lower on fold-0 mean+snap, run the format checks, ask the user before submitting.
+
+
+## Monday ensemble check - RESULT
+
+| ensemble | members | fold-0 mean | fold-0 mean+snap |
+|---|---|---|---|
+| C4 (sub10) | 10 | 0.18122 | 0.17957 |
+| C6 = C4 + exp12d + exp16c | 12 | 0.18059 | 0.17894 |
+
+| full 5-fold OOF (no snap) | MAE |
+|---|---|
+| exp12a | 0.19961 |
+| exp12b | 0.20572 |
+| exp12c | 0.20802 |
+| exp12a+b | 0.18796 |
+| exp12a+b+c | 0.18439 |
+
+- C6 0.17894: inside the pre-registered range (0.1775-0.1795), 0.0004 worse than the 0.1785 guess. Not proven wrong (< 0.17957), so sub11 uses C6.
+- 3-seed full OOF 0.18439 vs 0.185 expected from the averaging curve: matches. Each extra seed still helps: 1 -> 2 seeds -0.0117, 2 -> 3 seeds -0.0036 (seeds in order a, b, c).
+- sub11 = ensemble.py exp04 exp06 exp07 exp08 exp09 exp12a exp12b exp12c exp12d exp16a exp16b exp16c --snap. 29 test files.
+  Saved as submissions/sub11_C6_mean_snap.csv (md5 dcff29a9) and submission.csv. Format checks: 603600 x 2, columns id/pressure, ids identical to sub10, no NaN, 918 distinct snapped values, range -1.40 to 64.82. NOT submitted (waiting for the user).
+- Analysis code: runs/analysis/mon_ensemble.py, output mon_ensemble.txt.
+
+## Final pod #2 - PRE-REGISTRATION (DRAFT, awaiting approval)
+
+src/podqueue_final2.sh (md5 c47ead9d). Locked config bs128/h128 (refuses on another lock). The only change from pod #1 is seed/fold:
+exp12d (seed 45) f2, f3, f4, then exp12e (seed 46) f0-f4. 8 runs. Skips any run whose fold test file exists.
+- Hypothesis: new seeds behave like seeds 42-44, so the full 5-fold OOF of the seed mean keeps following c + d/n.
+- Expected: each run's best val_insp_mae in 0.196-0.216 (the range of the 15 completed exp12a/b/c folds). Full 5-fold OOF of mean(exp12a-e) about 0.181 (curve: 0.1753 + 0.0296/5 = 0.1812; estimate).
+- GPU time: 8 x 83 min = 11.1 h (measured), inside the 12 h pod timeout with about 55 min of margin.
+- Proven wrong if: any run > 0.220; or the 5-seed full OOF >= 0.18439 (the 3-seed value), meaning more seeds stopped helping; or speed > 18 s/epoch (then the last run will not finish before the timeout).
+- If proven wrong on the seed curve, Tuesday's pods should change approach rather than add more seeds.
