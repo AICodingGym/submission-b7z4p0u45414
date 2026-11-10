@@ -826,3 +826,32 @@ exp12d (seed 45) f2, f3, f4, then exp12e (seed 46) f0-f4. 8 runs. Skips any run 
 
 - New best: 0.16817 vs sub10 0.17044 (-0.00227). Fold 0 improved only 0.0006 (0.17957 -> 0.17894), so most of the LB gain likely comes from the 11 extra fold test files, which fold 0 cannot measure. That matches the guess written before submitting; it is still an interpretation, not a measurement.
 - Gap to benchmarks: MLEvolve 0.14237 (-0.026 to go), gold 0.1119.
+
+
+## Final pod #2 results (logged 2026-11-10 ~06:15 UTC)
+
+podqueue_final2.sh: start Mon Nov 9 17:34:20 UTC (LOCK bs128/h128), done Tue Nov 10 04:41:25 UTC (11.1 h). All 8 runs finished; runs/PODQUEUE_FINAL2_DONE exists.
+
+| run (bs128/h128) | seed | fold | best val_insp_mae |
+|---|---|---|---|
+| exp12d | 45 | 2 | 0.20395 |
+| exp12d | 45 | 3 | 0.20518 |
+| exp12d | 45 | 4 | 0.20756 |
+| exp12e | 46 | 0 | 0.21254 |
+| exp12e | 46 | 1 | 0.20210 |
+| exp12e | 46 | 2 | 0.20761 |
+| exp12e | 46 | 3 | 0.20093 |
+| exp12e | 46 | 4 | 0.20567 |
+
+- Pre-registered check "each run in 0.196-0.216": PASSED for all 8 (highest 0.21254). No run > 0.220.
+- exp12a-e are now 5 complete 5-fold seeds.
+- After the pod: the DataHub server could not get a GPU (05:42 UTC: "0/39 nodes are available: 2 Insufficient nvidia.com/gpu"; spawn timed out after 300 s). The server started at 06:11 UTC, apparently without a GPU (nvidia-smi prints nothing). Tonight's work is CPU-only.
+
+## Tuesday ensemble check - PRE-REGISTRATION (written and committed before running)
+
+1. Seed curve (pre-registered with pod #2): full 5-fold OOF of mean(exp12a..e), no snap. Expected 0.1812 (curve). Proven wrong if >= 0.18439 (3-seed value).
+2. sub12 candidate C7 = C6 + exp12e (exp12d is already a member; its 3 new folds come in automatically). 37 test files.
+   - One change vs sub11: add exp12e as a member, plus the new fold test files.
+   - Expected fold-0 mean+snap: 0.1787 (GUESS; range 0.1780-0.1795). C6 was 0.17894.
+   - Proven wrong if >= 0.17894; then sub12 = C6 members only (which still adds exp12d f2-f4 test files).
+- Decision: build sub12 from whichever of C7/C6 is lower on fold-0 mean+snap, run the format checks, ask the user before submitting.
