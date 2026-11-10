@@ -855,3 +855,36 @@ podqueue_final2.sh: start Mon Nov 9 17:34:20 UTC (LOCK bs128/h128), done Tue Nov
    - Expected fold-0 mean+snap: 0.1787 (GUESS; range 0.1780-0.1795). C6 was 0.17894.
    - Proven wrong if >= 0.17894; then sub12 = C6 members only (which still adds exp12d f2-f4 test files).
 - Decision: build sub12 from whichever of C7/C6 is lower on fold-0 mean+snap, run the format checks, ask the user before submitting.
+
+
+## Tuesday ensemble check - RESULT
+
+| ensemble | members | fold-0 mean | fold-0 mean+snap |
+|---|---|---|---|
+| C6 (sub11) | 12 | 0.18059 | 0.17894 |
+| C7 = C6 + exp12e | 13 | 0.18041 | 0.17869 |
+
+| seeds (full 5-fold OOF) | mean | mean+snap |
+|---|---|---|
+| 1 (exp12a) | 0.19961 | 0.19828 |
+| 2 | 0.18796 | 0.18646 |
+| 3 | 0.18439 | 0.18283 |
+| 4 | 0.18191 | 0.18031 |
+| 5 (exp12a-e) | 0.18028 | 0.17863 |
+
+- Seed curve: 5-seed 0.18028 vs 0.1812 expected; NOT proven wrong (< 0.18439). Slightly better than the curve.
+  Refit on n = 1..5 (least squares on 1/n): c 0.1760, d 0.0237 (was c 0.1753, d 0.0296 from fold-0 only).
+  Refit predictions, no snap: 6 seeds 0.1800, 7 seeds 0.1794, 8 seeds 0.1790. So each extra pod (~1.6 seeds) buys about -0.001 OOF (estimate).
+- Adding exp06 (older config, 5 folds) to the 5 seeds: 0.18001 (-0.0003). Diversity from that older model adds little.
+- exp12d alone and exp12e alone both 0.20577 full OOF.
+- C7 0.17869: matches the 0.1787 guess; < 0.17894, so sub12 uses C7.
+- sub12 = ensemble.py exp04 exp06 exp07 exp08 exp09 exp12a exp12b exp12c exp12d exp12e exp16a exp16b exp16c --snap. 37 test files.
+  submissions/sub12_C7_mean_snap.csv (md5 135f6900) and submission.csv. Format checks: 603600 x 2, id/pressure, ids identical to sub11, no NaN, 916 distinct values, range -1.40 to 64.82. NOT submitted (waiting for the user).
+- Analysis code: runs/analysis/tue_ensemble.py, output tue_ensemble.txt.
+
+## Final pod #3 - PRE-REGISTRATION (DRAFT, awaiting approval)
+
+src/podqueue_final3.sh. Locked config bs128/h128; only seed/fold change: exp12f (seed 47) f0-f4, then exp12g (seed 48) f0-f2. 8 runs, 11.1 h.
+- Expected: each run 0.196-0.216. 6-seed full OOF (exp12a-f) about 0.1800 (refit curve; estimate).
+- Proven wrong if: any run > 0.220; or the 6-seed full OOF >= 0.18028 (the 5-seed value); or speed > 18 s/epoch.
+- Known cost: the refit curve says this pod buys only about -0.001 OOF. GPU availability is now uncertain (tonight's server got none).
