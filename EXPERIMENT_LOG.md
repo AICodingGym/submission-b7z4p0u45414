@@ -888,3 +888,5 @@ src/podqueue_final3.sh. Locked config bs128/h128; only seed/fold change: exp12f 
 - Expected: each run 0.196-0.216. 6-seed full OOF (exp12a-f) about 0.1800 (refit curve; estimate).
 - Proven wrong if: any run > 0.220; or the 6-seed full OOF >= 0.18028 (the 5-seed value); or speed > 18 s/epoch.
 - Known cost: the refit curve says this pod buys only about -0.001 OOF. GPU availability is now uncertain (tonight's server got none).
+
+- APPROVED by the user 2026-11-10 ("Approve pod #3"). Script unchanged (md5 4e447c93). sub12 still not submitted: no answer yet.
